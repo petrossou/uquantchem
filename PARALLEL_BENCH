@@ -1,0 +1,8 @@
+On PDC's Lindgren. Test system Ethanol 6-311G** Tol=10E-12, calculation of forces.
+
+Processors     time
+240 		2 min   54 s
+336		2 min   49 s
+480		2 min   48 s
+576		3 min   18 s
+960		4 min    2 s

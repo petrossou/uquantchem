@@ -1,0 +1,52 @@
+#################################################################################
+# This makefile is for building the stand alone openmp version of uquantchem    #
+#         using the lapack-3.4.0 library that comes with the package.           #
+#                                                                               #
+#               Petros Souvatzis: petros.souvatzis@fysik.uu.se                  #
+#                       Tue Apr 24 13:39:21 CEST 2012				#
+#################################################################################
+
+FC = gfortran
+
+FFLAGS =  -fopenmp -ffree-form -ffree-line-length-none -frecursive
+
+F77FLAGS = -fopenmp -ffixed-form -frecursive
+
+LAPACKPATH = /Users/petros/UQUANTCHEM/Src/V.21/lapack-3.4.0
+
+BLASPATH = /Users/petros/UQUANTCHEM/Src/V.21/BLAS
+
+LIB = -L$(LAPACKPATH) -llapack -L$(BLASPATH) -lblas
+
+OFLAG  = -O3 -ftree-vectorize 
+
+SOURCE = datatypemodule.o exchcorrmodule.o random.o Afunc.o RHF.o Fnurec.o Fnu.o CISD.o getKv.o getK.o getJv.o getJ.o gammaf.o fj.o fac.o  \
+	 gto.o gtop.o gtopp.o gtoppp.o eeints.o diaghHF.o diagh.o dfac.o checkinputfile.o chargedenssave.o exciteornot.o \
+	 hforbitalsave.o binomfac.o basfunkval.o URHF.o primeeintegral.o potential.o overlap.o oneint.o normalize.o ROOTWEIGHT5.o \
+	 leastsq.o makedens.o kinetic.o ijkl.o homolumosave.o gettotalbasis.o rysquad.o rho.o readin.o ROOTWEIGHT4.o \
+	 interpol.o gradbasfunkval.o laplacebasfunkval.o hforbitalval.o gradhforbitalval.o laplacehforbitalval.o det.o \
+	 stoexponent.o slaterdet.o laplaceslaterdet.o gradslaterdet.o jastrowup.o jastrowdown.o jastrowud.o jastrow.o \
+	 DIIS.o preparedifusion.o gradjastrow.o laplacejastrow.o guideforce.o laplacetrialfnk.o trialfnk.o EL.o dqmc.o \
+	 findclosestatom.o ROOTWEIGHTMAX3.o readbasis.o primpotential.o primoverlap.o primkinetic.o MP2.o uquantchem.o \
+	 gradprimoverlap.o gradprimkinetic.o gradprimpotential.o gradprimeeintegral.o forces.o dAfunc.o relax.o linesearchmin.o \
+	 massa.o moleculardynamics.o moleculardynamicssoft.o invert.o vxc.o vxcalt.o dvxc.o ngbasfunkval.o nggradbasfunkval.o nglaplacebasfunkval.o \
+	 getvxcr.o atomicradii.o lebedev.o chebgauss.o sofmu.o pvoronoi.o getvxc.o excdens.o excdr.o exc.o DFT.o quadcheck.o TRACE.o \
+	 hessianbasfunk.o hessianrho.o dftforcedens.o getxcforce.o pnonorm.o tmu.o gradpvoronoi.o relaxf.o
+
+uquantchem:  $(SOURCE) 
+	$(FC) $(FFLAGS) $(SOURCE) $(LIB) -o uquantchem.omp
+
+clean: 
+	-/bin/rm *.o *~ *.mod uquantchem.omp
+
+%.o: %.f
+	$(FC) $(LIB) $(F77FLAGS) $(OFLAG) -c $<
+
+%.o: %.f90
+	$(FC) $(LIB) $(FFLAGS) $(OFLAG) -c $<
+
+lebedev.o: lebedev.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev.f90
+
+getxcforce.o: getxcforce.f90
+	$(FC) -ffree-form -ffree-line-length-none -c getxcforce.f90
