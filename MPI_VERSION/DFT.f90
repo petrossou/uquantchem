@@ -225,7 +225,7 @@ SUBROUTINE DFT(CORRLEVEL,NATOMS,ATOMS,BAS,S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,
                 ENDIF
 
                 CALL getvxc(CORRLEVEL,NATOMS,ATOMS,BAS,Pup,Pdown,LORDER,CGORDER,LQ,CGQ,NTOTALQUAD,Q1,Q2,Q3,Qstart,Qend,numprocessors,id,Vxc)
-                
+
                 CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
                 ! First  iteration is done with Hartree-Fock

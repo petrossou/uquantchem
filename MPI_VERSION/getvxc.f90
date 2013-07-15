@@ -23,9 +23,9 @@ SUBROUTINE getvxc(CORRLEVEL,NATOMS,ATOMS,BAS,Pup,Pdown,LORDER,CGORDER,LQ,CGQ,NTO
         DOUBLE PRECISION, EXTERNAL :: atomicradii,pvoronoi
         INTEGER :: n,m,I,J,ierr,status(MPI_STATUS_SIZE),tag,NN,NB
         DOUBLE PRECISION, PARAMETER :: PI = 3.1415926535897932384626433832795028841970d0
-        
+
         NB = BAS%NBAS
-        rcutt = 40.0d0 ! cuttoff radius in au for numerical quadrature
+        rcutt = 20.0d0 ! cuttoff radius in au for numerical quadrature
         tag = 1
  
         Vxc = 0.0d0
@@ -46,11 +46,11 @@ SUBROUTINE getvxc(CORRLEVEL,NATOMS,ATOMS,BAS,Pup,Pdown,LORDER,CGORDER,LQ,CGQ,NTO
                                         r(3) =  rad*cos(LQ(m,2))
                                         r = r + ATOMS(I)%R
                                         p = pvoronoi(I,NATOMS,ATOMS,r)
+                                        faktor = 2.0d0*rm*((x+1.0d0)/2.0d0)**3/(sqrt(1.0d0 - x**2)*(1.0d0 - ((x+1.0d0)/2.0d0)**4 ) )
                                         CALL getvxcr(CORRLEVEL,NATOMS,BAS,Pup,Pdown,r,Vxcr)
                                         ! This factor comes from the variable change r ! --> x, 
                                         ! and from using chebyshev-gauss radial quadrature of second order
                                         !faktor = 2.0d0*rm/(sqrt(1.0d0 - x**2)*(1.0d0 - x )**2 )
-                                        faktor = 2.0d0*rm*((x+1.0d0)/2.0d0)**3/(sqrt(1.0d0 - x**2)*(1.0d0 - ((x+1.0d0)/2.0d0)**4 ) )
                                         Vxcsend = Vxcsend  + 4*PI*p*CGQ(n,2)*LQ(m,3)*faktor*Vxcr*rad**2
                                         !Vxc = Vxc  + 4*PI*p*CGQ(n,2)*LQ(m,3)*faktor*Vxcr*rad**2
                ENDIF

@@ -1,25 +1,26 @@
-SUBROUTINE relax(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,NLSPOINTS,PORDER,DR,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
-& IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
+SUBROUTINE relax(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,NLSPOINTS,PORDER,DR,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
+& Istarts,Iends,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
         USE datatypemodule
         IMPLICIT NONE
         INCLUDE "mpif.h"
         INTEGER, INTENT(IN) :: NTOTALQUAD,LORDER,CGORDER,Qstart,Qend,Q1(Qstart:Qend),Q2(Qstart:Qend),Q3(Qstart:Qend)
-        INTEGER, INTENT(IN) :: NB,NRED,Ne,NATOMS,NSTEPS,DIISORD,DIISSTART,Istart,Iend,numprocessors,id,NLSPOINTS,PORDER,PULAY
-        INTEGER, INTENT(IN) :: IND1(Istart:Iend),IND2(Istart:Iend),IND3(Istart:Iend),IND4(Istart:Iend)
+        INTEGER, INTENT(IN) :: NB,NRED,Ne,NATOMS,NSTEPS,DIISORD,DIISSTART,Istarts,Iends,numprocessors,id,NLSPOINTS,PORDER,PULAY
+        INTEGER, ALLOCATABLE :: IND1(:),IND2(:),IND3(:),IND4(:)
         LOGICAL, INTENT(IN) :: APPROXEE
         CHARACTER(LEN=20), INTENT(IN) :: CORRLEVEL
-        DOUBLE PRECISION, INTENT(INOUT) :: S(NB,NB), H0(NB,NB), IntsvR(Istart:Iend)
+        DOUBLE PRECISION, INTENT(INOUT) :: S(NB,NB), H0(NB,NB)
         TYPE(ATOM), INTENT(INOUT) :: ATOMS(NATOMS)
         TYPE(BASIS), INTENT(INOUT)  :: BAS
         DOUBLE PRECISION, INTENT(IN) :: MIX,Tol,PRYSR(25,25),PRYSW(25,25),FTol,LQ(LORDER,3),CGQ(CGORDER,2),EETOL
         DOUBLE PRECISION, INTENT(INOUT)  :: DR
         DOUBLE PRECISION :: ETOT, EHFeigen(NB),EIGENVECT(NB,NB),EHFeigenup(NB),EHFeigendown(NB),Cup(NB,NB),Cdown(NB,NB),DE,EOLD
-        DOUBLE PRECISION :: Pup(NB,NB),Pdown(NB,NB),P(NB,NB)
-        DOUBLE PRECISION, INTENT(INOUT) :: gradS(NATOMS,3,NB,NB),gradT(NATOMS,3,NB,NB),gradV(NATOMS,3,NB,NB),gradIntsvR(NATOMS,3,Istart:Iend),NucE
+        DOUBLE PRECISION :: Pup(NB,NB),Pdown(NB,NB),P(NB,NB),DMAT(NB,NB)
+        DOUBLE PRECISION, INTENT(INOUT) :: gradS(NATOMS,3,NB,NB),gradT(NATOMS,3,NB,NB),gradV(NATOMS,3,NB,NB),NucE
         DOUBLE PRECISION :: leng, f(3),g(3),Rn(3),force(NATOMS,3),T(NB,NB),V(NB,NB),DR0,DR1,DR2,R0(NATOMS,3),R1(NATOMS,3),R2(NATOMS,3),DRMOLD
         DOUBLE PRECISION :: forceold(NATOMS,3),gradold(NATOMS,3),grad(NATOMS,3),E0,E1,E2,E3,E4,const1,const2,DRM,nom,normgrad
+        DOUBLE PRECISION, ALLOCATABLE :: dInts(:),IntsvR(:),gradIntsvR(:,:,:)
         LOGICAL :: CFORCE,SCRATCH,LSEARCH,ST
-        INTEGER :: I,J,II,JJ,KK,NLITER,JSTART,JEND,NPOINTS,POLYORDER,NSCF,ierr
+        INTEGER :: I,J,II,JJ,KK,NLITER,JSTART,JEND,NPOINTS,POLYORDER,NSCF,ierr,NONZERO,TOTALNONZERO,NONZEROO,NDIAG,Istart,Iend
         DOUBLE PRECISION, ALLOCATABLE :: ENERGY(:),DRF(:)
 
         CFORCE = .TRUE.
@@ -32,6 +33,36 @@ SUBROUTINE relax(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,FT
         ST = .TRUE.
         NPOINTS = NLSPOINTS
         POLYORDER = PORDER
+
+        NDIAG = ( NB*(NB+1) )/2
+        ALLOCATE(dInts(NDIAG))
+
+        !======================================================================
+        ! Calculating the ee-tensor (ij|kl)
+        !=====================================================================================================================================================================
+        DMAT = 1.0d0
+        NONZERO = 1
+        Istart = Istarts
+        Iend   = Iends
+        ALLOCATE(IND1(1),IND2(1),IND3(1),IND4(1))
+        ! Counting the number of "non-zero" elements og the ee-tensor (ij|kl), elements satisfying |(ij|kl)| < EETOL 
+        CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,DMAT,.FALSE.,NDIAG,NONZERO,TOTALNONZERO,dInts)
+        DEALLOCATE(IND1,IND2,IND3,IND4)
+        IF ( NONZERO .EQ. 0 ) THEN
+            NONZEROO = NONZERO +1
+        ELSE
+            NONZEROO = NONZERO
+        ENDIF
+        ALLOCATE(IND1(NONZEROO),IND2(NONZEROO),IND3(NONZEROO),IND4(NONZEROO))
+        ! creating a mapping from the non-zero index running from 1 to NONZERO on each thread to the contracted index ( see the routine ijkl.f90 for definition )
+        CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,DMAT,.TRUE.,NDIAG,NONZEROO,TOTALNONZERO,dInts)
+        Istart = 1
+        Iend = NONZEROO
+        ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(NATOMS,3,Istart:Iend))
+        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+        CALL eeints(NATOMS,NATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,.TRUE.,id,NONZERO,DMAT,dInts)
+        !=======================================================================================================================================================================
+
 
         ALLOCATE(ENERGY(NPOINTS),DRF(NPOINTS))
 
@@ -155,18 +186,70 @@ SUBROUTINE relax(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,FT
                                 CALL normalize(BAS)
                 
                                 ! Calculating the matrices in the basis of the updated positions:
-                                CALL overlap(NATOMS,BAS,S,gradS)
-                                CALL kinetic(NATOMS,BAS,T,gradT)
-                                CALL potential(BAS,NATOMS,ATOMS,V,gradV)
+                                CALL overlap(NATOMS,BAS,S,gradS,BAS%NBAS,.TRUE.)
+                                CALL kinetic(NATOMS,BAS,T,gradT,BAS%NBAS,.TRUE.)
+                                CALL potential(BAS,NATOMS,ATOMS,V,gradV,BAS%NBAS,.TRUE.,id,numprocessors)
                 
                                 H0 = T + V
 
                                 ! Calculation of electron repulsion tensor (ij|kl) in the basis of the updated positions:
                                 IF ( LSEARCH ) THEN
-                                        CALL eeints(NATOMS,NATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NRED,Istart,Iend,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,.FALSE.,id,Pup+Pdown)
+                                      !=================================================================================================
+                                      ! Calculation of electron repulsion tensor (ij|kl) in the basis of the updated positions:
+                                      !============================================================================================================================================
+                                      NONZERO = 1
+                                      Istart = Istarts
+                                      Iend   = Iends
+                                      DEALLOCATE(IND1,IND2,IND3,IND4)
+                                      ALLOCATE(IND1(1),IND2(1),IND3(1),IND4(1))
+                                      ! Counting the number of "non-zero" elements og the ee-tensor (ij|kl), elements satisfying |(ij|kl)| < EETOL 
+                                      CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,Pup+Pdown,.FALSE.,NDIAG,NONZERO,TOTALNONZERO,dInts)
+                                      DEALLOCATE(IND1,IND2,IND3,IND4)
+                                      IF ( NONZERO .EQ. 0 ) THEN
+                                          NONZEROO = NONZERO +1
+                                      ELSE
+                                          NONZEROO = NONZERO
+                                      ENDIF
+                                      ALLOCATE(IND1(NONZEROO),IND2(NONZEROO),IND3(NONZEROO),IND4(NONZEROO))
+                                      ! creating a mapping from the non-zero index running from 1 to NONZERO on each thread to the contracted index ( see the routine ijkl.f90 for definition )
+                                      CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,Pup+Pdown,.TRUE.,NDIAG,NONZEROO,TOTALNONZERO,dInts)
+                                      Istart = 1
+                                      Iend = NONZEROO
+                                      DEALLOCATE(IntsvR,gradIntsvR)
+                                      ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(NATOMS,3,Istart:Iend))
+                                      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                                      CALL eeints(NATOMS,NATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istart,Iend,PRYSR,PRYSW,numprocessors,& 
+                                                  & APPROXEE,EETOL,.FALSE.,id,NONZERO,Pup+Pdown,dInts)
+                                      !============================================================================================================================================== 
                                 ELSE
-                                        CALL eeints(NATOMS,NATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NRED,Istart,Iend,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,.TRUE.,id,Pup+Pdown)
-                                ENDIF
+                                      !=================================================================================================
+                                      ! Calculation of electron repulsion tensor (ij|kl) in the basis of the updated positions:
+                                      !============================================================================================================================================       
+                                      NONZERO = 1
+                                      Istart = Istarts
+                                      Iend   = Iends
+                                      DEALLOCATE(IND1,IND2,IND3,IND4)
+                                      ALLOCATE(IND1(1),IND2(1),IND3(1),IND4(1))
+                                      ! Counting the number of "non-zero" elements og the ee-tensor (ij|kl), elements satisfying |(ij|kl)| < EETOL 
+                                      CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,Pup+Pdown,.FALSE.,NDIAG,NONZERO,TOTALNONZERO,dInts)
+                                      DEALLOCATE(IND1,IND2,IND3,IND4)
+                                      IF ( NONZERO .EQ. 0 ) THEN
+                                          NONZEROO = NONZERO +1
+                                      ELSE
+                                          NONZEROO = NONZERO
+                                      ENDIF
+                                      ALLOCATE(IND1(NONZEROO),IND2(NONZEROO),IND3(NONZEROO),IND4(NONZEROO))
+                                      ! creating a mapping from the non-zero index running from 1 to NONZERO on each thread to the contracted index ( see the routine ijkl.f90 for definition )
+                                      CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,Pup+Pdown,.TRUE.,NDIAG,NONZEROO,TOTALNONZERO,dInts)
+                                      Istart = 1
+                                      Iend = NONZEROO
+                                      DEALLOCATE(IntsvR,gradIntsvR)
+                                      ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(NATOMS,3,Istart:Iend))
+                                      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                                      CALL eeints(NATOMS,NATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istart,Iend,PRYSR,PRYSW,numprocessors,&  
+                                                  & APPROXEE,EETOL,.TRUE.,id,NONZERO,Pup+Pdown,dInts)
+                                      !============================================================================================================================================== 
+                               ENDIF
 
                                 IF ( CORRLEVEL .EQ. 'RHF' .AND. LSEARCH ) THEN
                                         CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol/100,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1, &

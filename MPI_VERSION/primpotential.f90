@@ -20,7 +20,7 @@ FUNCTION primpotential(L1,M1,N1,A,alpha1,C,L2,M2,N2,B,alpha2)
       AB = A-B
 
       X = gama*DOT_PRODUCT(PC,PC)
-
+      
       ALLOCATE(FNUVEC(L1+L2+M1+M2+N1+N2+1))
       
       CALL Fnurec(L1+L2+M1+M2+N1+N2,FNUVEC,X)
@@ -47,8 +47,8 @@ FUNCTION primpotential(L1,M1,N1,A,alpha1,C,L2,M2,N2,B,alpha2)
             ENDDO
          ENDDO
       ENDDO
-      
       X = (alpha1*alpha2/gama)*DOT_PRODUCT(AB,AB)
       primpotential = primpotential*(2.0d0*pi/gama)*EXP(-X)
+
 
       END FUNCTION primpotential

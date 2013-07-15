@@ -1,4 +1,4 @@
-SUBROUTINE vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
+SUBROUTINE vxc(CORRLEVEL,BAS,densu,densd,gdensu,gdensd,r,V)
         ! this subroutine calculates the exchange correlation 
         ! potential.
         USE datatypemodule
@@ -6,15 +6,15 @@ SUBROUTINE vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
         IMPLICIT NONE
         CHARACTER(LEN=20), INTENT(IN) :: CORRLEVEL
         TYPE(BASIS), INTENT(IN)  :: BAS
-        DOUBLE PRECISION, INTENT(IN) :: Pup(BAS%NBAS,BAS%NBAS), Pdown(BAS%NBAS,BAS%NBAS),r(3)
+        DOUBLE PRECISION, INTENT(IN) :: densu,densd,gdensu(3),gdensd(3),r(3)
         DOUBLE PRECISION, INTENT(OUT) :: V(2)
         DOUBLE PRECISION, EXTERNAL :: rho
-        DOUBLE PRECISION :: dens,densu,densd,gdensu(3),gdensd(3),gdens(3),ldensu,ldensd
+        DOUBLE PRECISION :: dens,gdens(3),ldensu,ldensd
         DOUBLE PRECISION :: Vcc(2),Vex(2),P(BAS%NBAS,BAS%NBAS),lgrh
         
-        densu = rho(BAS,Pup,r)
-        densd = rho(BAS,Pdown,r)
-       
+        !densu = rho(BAS,Pup,r)
+        !densd = rho(BAS,Pdown,r)
+        gdens = gdensu + gdensd
         dens = densd + densu
 
         IF ( dens .GT. 1.0E-20 )  THEN
@@ -25,16 +25,16 @@ SUBROUTINE vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
                                 V = Vcc + Vex
 
                         CASE('PBE')
-                                P = Pup + Pdown
-                                CALL gradrho(BAS,P,r,gdens)
+                                !P = Pup + Pdown
+                                !CALL gradrho(BAS,P,r,gdens)
                                 lgrh = sqrt(DOT_PRODUCT(gdens,gdens))
                                 !print*,'(1)',lgrh
                                 CALL VPBE(densu,densd,lgrh,Vcc)
                                 V = Vcc
 
                         CASE('B3LYP')
-                                CALL gradrho(BAS,Pup,r,gdensu)
-                                CALL gradrho(BAS,Pdown,r,gdensd)
+                                !CALL gradrho(BAS,Pup,r,gdensu)
+                                !CALL gradrho(BAS,Pdown,r,gdensd)
                                 !----------------------------------
                                 ! The Laplacian is no longer needed
                                 ! since we use the expression from 
@@ -52,8 +52,8 @@ SUBROUTINE vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
                                 V = Vcc
 
                         CASE DEFAULT
-                                P = Pup + Pdown
-                                CALL gradrho(BAS,P,r,gdens)
+                                !P = Pup + Pdown
+                                !CALL gradrho(BAS,P,r,gdens)
                                 lgrh = sqrt(DOT_PRODUCT(gdens,gdens))
                                 CALL VPBE(densu,densd,lgrh,Vcc)
                                 V = Vcc

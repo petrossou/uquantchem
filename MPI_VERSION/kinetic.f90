@@ -1,11 +1,12 @@
-SUBROUTINE kinetic(NATOMS,BAS,T,gradT)
+SUBROUTINE kinetic(NATOMS,BAS,T,gradT,NSI,CFORCE)
       ! This subroutine calculates the kinetic energy matrix
       USE datatypemodule
       IMPLICIT NONE
-      INTEGER :: NATOMS
+      INTEGER :: NATOMS,NSI
+      LOGICAL, INTENT(IN) :: CFORCE
       DOUBLE PRECISION, EXTERNAL :: primkinetic
       TYPE(BASIS), INTENT(IN) :: BAS
-      DOUBLE PRECISION, INTENT(OUT) :: T(BAS%NBAS,BAS%NBAS),gradT(NATOMS,3,BAS%NBAS,BAS%NBAS)
+      DOUBLE PRECISION, INTENT(OUT) :: T(BAS%NBAS,BAS%NBAS),gradT(NATOMS,3,NSI,NSI)
       INTEGER :: I,J,N,K,L1,M1,N1,L2,M2,N2,M
       DOUBLE PRECISION :: NO1,NO2,NP1,NP2,gradient(2,3)
       DOUBLE PRECISION :: A(3),B(3),alpha1,alpha2,coeff1,coeff2
@@ -49,19 +50,22 @@ SUBROUTINE kinetic(NATOMS,BAS,T,gradT)
                                         !-------------------------------------------------
                                         ! Calculation of gradient of Kinetic energy matrix
                                         !--------------------------------------------------
+                                        IF ( CFORCE ) THEN
+                                         CALL gradprimkinetic(L1,M1,N1,A,alpha1,L2,M2,N2,B,alpha2,gradient)
 
-                                        CALL gradprimkinetic(L1,M1,N1,A,alpha1,L2,M2,N2,B,alpha2,gradient)
-
-                                        gradT(BAS%PSI(I)%ATYPE,:,I,J) = gradT(BAS%PSI(I)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(1,:)
-                                        gradT(BAS%PSI(J)%ATYPE,:,I,J) = gradT(BAS%PSI(J)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(2,:)
+                                          gradT(BAS%PSI(I)%ATYPE,:,I,J) = gradT(BAS%PSI(I)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(1,:)
+                                          gradT(BAS%PSI(J)%ATYPE,:,I,J) = gradT(BAS%PSI(J)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(2,:)
+                                        ENDIF
                                 ENDDO
                         ENDDO
 
                         IF ( I .NE. J ) THEN 
                                 T(J,I) = T(I,J)
-                                DO M=1,NATOMS
+                                IF ( CFORCE ) THEN
+                                  DO M=1,NATOMS
                                         gradT(M,:,J,I) = gradT(M,:,I,J)
-                                ENDDO
+                                  ENDDO
+                                ENDIF
                                 !gradT(BAS%PSI(I)%ATYPE,:,J,I) = gradT(BAS%PSI(I)%ATYPE,:,I,J)
                                 !gradT(BAS%PSI(J)%ATYPE,:,J,I) = gradT(BAS%PSI(J)%ATYPE,:,I,J)
                         ENDIF

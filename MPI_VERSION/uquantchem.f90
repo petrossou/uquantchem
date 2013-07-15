@@ -13,22 +13,22 @@ PROGRAM uquantchem
       TYPE(BASIS) :: BAS
       CHARACTER(LEN=6) :: DUMMY
       CHARACTER(Len=20) :: date,time,zone
-      INTEGER :: NLINES,I,J,K,L,M,NB,Ne,NRED,Lmax,MESH(3),REDISTRIBUTIONFREQ,NPERSIST,N0,Istart,Iend,Istartg,Iendg,NVMC,IOSA,FNATOMS,FNRED,NSTEPS,NLSPOINTS,PORDER
+      INTEGER :: NLINES,I,J,K,L,M,NB,Ne,NRED,Lmax,MESH(3),REDISTRIBUTIONFREQ,NPERSIST,N0,Istart,Iend,Istartg,Iendg,NVMC,IOSA,FNATOMS,FNRED,NSTEPS,NLSPOINTS,PORDER,NSI
       LOGICAL :: finns,WRITECICOEF,WRITEDENS,WHOMOLUMO,LEXCSP,SPINCONSERVE,RESTRICT,APPROXEE,NOREDIST,HYBRID,USEGTO,CORRALCUSP,VMCCALC,HFORBWRITE,CFORCE,RELAXN
       LOGICAL :: WRITEONFLY,MOVIE,MOLDYN
-      DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),Intsv(:),IntsvR(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsvR(:,:,:)
-      DOUBLE PRECISION, ALLOCATABLE :: gradS(:,:,:,:),gradT(:,:,:,:),gradV(:,:,:,:),DMAT(:,:)
+      DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),Intsv(:),IntsvR(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsvR(:,:,:),HUCKELH(:,:),CHUCKEL(:,:),EHUCKEL(:)
+      DOUBLE PRECISION, ALLOCATABLE :: gradS(:,:,:,:),gradT(:,:,:,:),gradV(:,:,:,:),DMAT(:,:),CHUCKEL2(:,:),dInts(:),Intso(:),Intsoo(:)
       DOUBLE PRECISION, ALLOCATABLE :: EHFeigenup(:),EHFeigendown(:),Cup(:,:),Cdown(:,:)
       DOUBLE PRECISION, ALLOCATABLE :: EHFeigen(:),P(:,:),Pup(:,:),Pdown(:,:),C1(:,:),C2(:,:),force(:,:),CN(:),LQ(:,:),CGQ(:,:)
-      DOUBLE PRECISION  :: PRYSR(25,25),PRYSW(25,25),rts(25),wts(25),TOTALTIME,ECISD,LIMITS(3),ENEXCM,EMP2,TIMESTEP,TEND,TSTART,CUTTOFFFACTOR,MIX,Aexpan,LAMDA,rc
+      DOUBLE PRECISION  :: PRYSR(25,25),PRYSW(25,25),rts(25),wts(25),TOTALTIME,ECISD,LIMITS(3),ENEXCM,EMP2,TIMESTEP,TEND,TSTART,CUTTOFFFACTOR,MIX,Aexpan,LAMDA,rc,INFOH,HK
       DOUBLE PRECISION :: ESIGMA,EDQMC,a,b,BETA,BJASTROW,CJASTROW,GAMA,BETAA,POLY(6),deltar,DR,FTol,TEMPERATURE,kappa,alpha,EETOL,CNSTART(4),alphastart,kappastart
       INTEGER :: STARTTIME(8),STOPTIME(8),RUNTIME(8),NEEXC,SAMPLERATE,NREPLICAS,NRECALC,scount,DIISORD,DIISSTART,NTIMESTEPS,NSCF,PULAY,FIXNSCF,DORDER
-      INTEGER :: NLEBEDEV,NCHEBGAUSS,LEBPOINTS(24),CGORDER,LORDER,NTOTALQUAD,Qstart,Qend,RELALGO
+      INTEGER :: NLEBEDEV,NCHEBGAUSS,LEBPOINTS(24),CGORDER,LORDER,NTOTALQUAD,Qstart,Qend,RELALGO,NDIAG,NONZERO,NONZEROO,TOTALNONZERO,Istarts,Iends,KK
       INTEGER, EXTERNAL :: ijkl
-      INTEGER, ALLOCATABLE :: N0p(:),rcounts(:),displs(:),Istart2(:),Istart3(:),IND1(:),IND2(:),IND3(:),IND4(:),Q1(:),Q2(:),Q3(:),Q11(:),Q22(:),Q33(:)
+      INTEGER, ALLOCATABLE :: N0p(:),rcounts(:),displs(:),Istart2(:),Istart3(:),IND1(:),IND2(:),IND3(:),IND4(:),Q1(:),Q2(:),Q3(:),Q11(:),Q22(:),Q33(:),EEMAP(:)
       DOUBLE PRECISION, EXTERNAL :: massa
-      LOGICAL :: RESTART,ZEROSCF,XLBOMD,DFTC,SOFTSTART
-
+      LOGICAL :: RESTART,ZEROSCF,XLBOMD,DFTC,SOFTSTART,HUCKEL,SCRATCH
+      
       call MPI_Init ( ierr )
       call MPI_Comm_rank ( MPI_COMM_WORLD, id, ierr )
       call MPI_Comm_size ( MPI_COMM_WORLD, numprocessors, ierr )
@@ -55,7 +55,8 @@ PROGRAM uquantchem
       
       CALL readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBERS,APOS,Ne,Tol,WRITECICOEF,WRITEDENS,WHOMOLUMO,MESH,LIMITS,LEXCSP,NEEXC,ENEXCM,SPINCONSERVE,RESTRICT,APPROXEE, &
       & SAMPLERATE,NREPLICAS,TIMESTEP,TEND,TSTART,BETA,BJASTROW,CJASTROW,NPERSIST,REDISTRIBUTIONFREQ,NOREDIST,NRECALC,CUTTOFFFACTOR,MIX,DIISORD,DIISSTART,HYBRID,rc,CORRALCUSP,NVMC, &
-      & HFORBWRITE,IOSA,CFORCE,RELAXN,NSTEPS,DR,FTol,NLSPOINTS,PORDER,WRITEONFLY,MOVIE,MOLDYN,TEMPERATURE,ZEROSCF,XLBOMD,kappa,alpha,DORDER,PULAY,FIXNSCF,NLEBEDEV,NCHEBGAUSS,EETOL,RELALGO,SOFTSTART)
+      & HFORBWRITE,IOSA,CFORCE,RELAXN,NSTEPS,DR,FTol,NLSPOINTS,PORDER,WRITEONFLY,MOVIE,MOLDYN,TEMPERATURE,ZEROSCF,XLBOMD,kappa,alpha,DORDER,PULAY,FIXNSCF,NLEBEDEV,NCHEBGAUSS,EETOL,RELALGO,SOFTSTART, &
+      & HUCKEL)
       
       IF ( DORDER .LT. 4 )  DORDER = 4
       ALLOCATE(CN(DORDER))
@@ -259,10 +260,10 @@ PROGRAM uquantchem
         !     BASISSETS, BY ADDING ALL THE L-SUBSHELLS AND CONCATANATING THE
         !     LOCAL ATOMIC BASES.
         !===========================================================================
-        
+   
         ! Here the total number of basis functions is counted
         CALL gettotalbasis(NATOMS,ATOMS,NB,BAS,.TRUE.)
-        
+    
         BAS%NBAS = NB
         ALLOCATE(BAS%PSI(NB))
         
@@ -278,10 +279,10 @@ PROGRAM uquantchem
        IF (HFORBWRITE .AND. IOSA .EQ. 0 ) THEN
                IOSA = (Ne-MOD(Ne,2))/2 + MOD(Ne,2)
        ENDIF
-
+      
         ! Here the total molecular basis set is put together
         CALL gettotalbasis(NATOMS,ATOMS,NB,BAS,.FALSE.)
-        
+     
         !=======================================================================
         ! (3) HERE THE OVERLAP-, KINETIC- AND POTENTIAL ENERGY- MATRICES ARE
         !     CALCULATED.
@@ -290,31 +291,37 @@ PROGRAM uquantchem
         ! Here the normalization of the basis functions is performed
 
         CALL normalize(BAS)
+        
+        NSI = 1
+        NDIAG = ( NB*(NB+1) )/2
+
+        IF ( CFORCE ) NSI = NB
 
         ! Here the overlap matrix is calculated 
 
-        ALLOCATE(S(NB,NB),gradS(NATOMS,3,NB,NB),DMAT(NB,NB))
+        ALLOCATE(S(NB,NB),gradS(NATOMS,3,NSI,NSI),DMAT(NB,NB),HUCKELH(NB,NB),CHUCKEL(NB,NB),CHUCKEL2(NB,NB),EHUCKEL(NB),dInts(NDIAG))
 
-        CALL overlap(NATOMS,BAS,S,gradS)
-        
+        CALL overlap(NATOMS,BAS,S,gradS,NSI,CFORCE)
+       
         ! Here the kinetic energy matrix is calculated
 
-        ALLOCATE(T(NB,NB),gradT(NATOMS,3,NB,NB))
+        ALLOCATE(T(NB,NB),gradT(NATOMS,3,NSI,NSI))
 
-        CALL kinetic(NATOMS,BAS,T,gradT)
+        CALL kinetic(NATOMS,BAS,T,gradT,NSI,CFORCE)
         
         ! Here the potential energy matrix is calculated
-
-        ALLOCATE(V(NB,NB),gradV(NATOMS,3,NB,NB))
-
-        CALL potential(BAS,NATOMS,ATOMS,V,gradV)
         
+        ALLOCATE(V(NB,NB),gradV(NATOMS,3,NSI,NSI))
+        
+        CALL potential(BAS,NATOMS,ATOMS,V,gradV,NSI,CFORCE,id,numprocessors)
+        
+        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
         ! If a DFT type of calculation is performed the 
         ! exchange correlation matrix elements and their 
         ! nuclear gradients are allocated 
 
         !IF ( DFTC ) ALLOCATE(Vxc(2,NB,NB),gVxc(NATOMS,2,3,NB,NB))
-
+        
         !===========================================================================
         ! (4) Here the electron-electron repulsion 'tensor', Intsv(:), is calulated
         !===========================================================================
@@ -418,9 +425,6 @@ PROGRAM uquantchem
         !==========================================================================================
         ! END OF PREPARATION FOR THE PARALELL COMPUTATION OF THE EXCHANGE-CORR ENERGY AND POTENTIAL
         !==========================================================================================
-     
-        !===========================================================================
-        ! PREPARATION FOR THE PARALELL COMPUTATION OF THE ee-repulsion-tensor Intsv
         !============================================================================
         ! Here we distribute the calculation of the columns of the ee-integral array
         ! Intsv over the (numprocessors) number of mpi threads.
@@ -445,7 +449,7 @@ PROGRAM uquantchem
                I = I+1
         ENDDO
 
-       
+
         IF ( id .EQ. 0 ) THEN
              Istart = 1
         ELSE
@@ -462,6 +466,36 @@ PROGRAM uquantchem
         ! END OF PREPARATION FOR THE PARALELL COMPUTATION OF THE ee-repulsion-tensor Intsv
         !==================================================================================
         
+        SCRATCH = .TRUE.
+        DMAT = 1.0d0
+        Istarts =  Istart
+        Iends   =  Iend
+        NONZERO = 1
+        IF ( .not. MOLDYN .AND. .not. RELAXN ) THEN
+        ALLOCATE(IND1(1),IND2(1),IND3(1),IND4(1))
+        
+        ! Counting the number of "non-zero" elements og the ee-tensor (ij|kl), elements satisfying |(ij|kl)| < EETOL 
+        CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,DMAT,.FALSE.,NDIAG,NONZERO,TOTALNONZERO,dInts)
+        
+       DEALLOCATE(IND1,IND2,IND3,IND4)
+        
+        IF ( NONZERO .EQ. 0 ) THEN
+            print*,'Number of (ij|kl) to be calculated on thread,',id,', is zero!'
+            ! We cannot allocate IND1(1:0),IND1(1:0),....
+            ! Therfore we must create a dummy entry:
+            NONZEROO = NONZERO +1
+        ELSE
+            NONZEROO = NONZERO
+        ENDIF
+
+        ALLOCATE(IND1(NONZEROO),IND2(NONZEROO),IND3(NONZEROO),IND4(NONZEROO))
+        
+        ! creating a mapping from the non-zero index running from 1 to NONZERO on each thread to the contracted index ( see the routine ijkl.f90 for definition )
+        CALL countee(BAS,IND1,IND2,IND3,IND4,Istart,Iend,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,id,DMAT,.TRUE.,NDIAG,NONZEROO,TOTALNONZERO,dInts)
+        
+        Istart = 1
+        Iend = NONZEROO
+        
         IF ( CFORCE ) THEN
                 Istartg = Istart
                 Iendg = Iend
@@ -471,12 +505,21 @@ PROGRAM uquantchem
                 Iendg = 1
                 FNATOMS = 1
         ENDIF
-
-        ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(FNATOMS,3,Istartg:Iendg),IND1(Istart:Iend),IND2(Istart:Iend),IND3(Istart:Iend),IND4(Istart:Iend))
         
-        DMAT = 1.0d0
-
-        CALL eeints(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NRED,Istart,Iend,Istartg,Iendg,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,DMAT)
+        ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(FNATOMS,3,Istartg:Iendg))
+        
+        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+        
+        CALL eeints(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,NONZERO,DMAT,dInts)
+        
+        IF ( id .EQ. 0 ) THEN
+         print*,' '
+         WRITE(*,'(A62)')'    =========================================================='
+         WRITE(*,'(A47,I12)')'    Number of non-reduced ee-tensor elements = ',NRED
+         WRITE(*,'(A47,I12)')'    Number of  reduced    ee-tensor elements = ',TOTALNONZERO
+         WRITE(*,'(A62)')'    =========================================================='
+         print*,' '
+        ENDIF
         
         !-------------------------------------------------------------------------------------
         ! preparation for gathering all the different parts of the ee-tensor, IntsvR, that are 
@@ -502,7 +545,7 @@ PROGRAM uquantchem
          ENDDO
         
         scount = N0p(id+1)
-        
+        ENDIF
 
         ALLOCATE(H0(NB,NB))
         
@@ -511,13 +554,13 @@ PROGRAM uquantchem
         IF ( RELAXN ) THEN
                 ! Relxing by searching for minimum energy
                 IF ( RELALGO .EQ. 2 ) THEN
-                        CALL relax(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,NLSPOINTS,PORDER,DR,BAS,ATOMS, &
-                                & APPROXEE,CORRLEVEL,PRYSR,PRYSW,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
+                        CALL relax(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,NLSPOINTS,PORDER,DR,BAS,ATOMS, &
+                                & APPROXEE,CORRLEVEL,PRYSR,PRYSW,Istarts,Iends,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
                 ENDIF
                 ! Relaxing by searching for FORCES = 0
                 IF ( RELALGO .EQ. 1 ) THEN
-                        CALL relaxf(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,DR,BAS,ATOMS, &
-                                & APPROXEE,CORRLEVEL,PRYSR,PRYSW,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
+                        CALL relaxf(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DIISSTART,NATOMS,NSTEPS,DR,BAS,ATOMS, &
+                                & APPROXEE,CORRLEVEL,PRYSR,PRYSW,Istarts,Iends,numprocessors,id,PULAY,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
                 ENDIF
         ENDIF
 
@@ -529,12 +572,12 @@ PROGRAM uquantchem
                 ENDIF
                 NTIMESTEPS = INT(TEND/TIMESTEP)
                 IF ( SOFTSTART ) THEN
-                   CALL moleculardynamicssoft(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,MIX,DIISORD,DIISSTART,NATOMS,NTIMESTEPS,TIMESTEP,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
-                   & WRITEONFLY,MOVIE,SAMPLERATE,TEMPERATURE,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,ZEROSCF,XLBOMD,kappa,alpha,CN,PULAY,FIXNSCF,DORDER,&
+                   CALL moleculardynamicssoft(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,MIX,DIISORD,DIISSTART,NATOMS,NTIMESTEPS,TIMESTEP,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
+                   & WRITEONFLY,MOVIE,SAMPLERATE,TEMPERATURE,Istarts,Iends,numprocessors,id,ZEROSCF,XLBOMD,kappa,alpha,CN,PULAY,FIXNSCF,DORDER,&
                    & Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL,CNSTART,alphastart,kappastart)
                 ELSE
-                   CALL moleculardynamics(gradS,gradT,gradV,gradIntsvR,S,H0,IntsvR,NB,NRED,Ne,nucE,Tol,MIX,DIISORD,DIISSTART,NATOMS,NTIMESTEPS,TIMESTEP,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
-                   & WRITEONFLY,MOVIE,SAMPLERATE,TEMPERATURE,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,ZEROSCF,XLBOMD,kappa,alpha,CN,PULAY,FIXNSCF,DORDER,&
+                   CALL moleculardynamics(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,MIX,DIISORD,DIISSTART,NATOMS,NTIMESTEPS,TIMESTEP,BAS,ATOMS,APPROXEE,CORRLEVEL,PRYSR,PRYSW, &
+                   & WRITEONFLY,MOVIE,SAMPLERATE,TEMPERATURE,Istarts,Iends,numprocessors,id,ZEROSCF,XLBOMD,kappa,alpha,CN,PULAY,FIXNSCF,DORDER,&
                    & Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD,LORDER,CGORDER,LQ,CGQ,EETOL)
                 ENDIF
                                                                                                              
@@ -547,8 +590,12 @@ PROGRAM uquantchem
         IF ( CORRLEVEL .EQ. 'RHF' ) THEN
                 
                 ALLOCATE(EIGENVECT(NB,NB),EHFeigen(NB),P(NB,NB),C1(NB,NB))
-                P = 0.0d0
-                CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,.TRUE.,.FALSE.)
+                IF ( HUCKEL ) THEN
+                   P = DMAT
+                ELSE
+                   P = 0.0d0
+                ENDIF
+                CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
 
                 !====================
                 ! CALCULATING FORCES
@@ -593,16 +640,20 @@ PROGRAM uquantchem
         IF ( CORRLEVEL .EQ. 'URHF' .OR. CORRLEVEL .EQ. 'CISD' .OR. CORRLEVEL .EQ. 'MP2' .OR. CORRLEVEL .EQ. 'DQMC' .OR. CORRLEVEL .EQ. 'VMC' .OR. DFTC ) THEN
                 
                 ALLOCATE(EHFeigenup(NB),EHFeigendown(NB),Cup(NB,NB),Cdown(NB,NB),P(NB,NB),Pup(NB,NB),Pdown(NB,NB),C1(NB,NB),C2(NB,NB))
-                
-                IF ( .not. RESTRICT .OR. CORRLEVEL .EQ. 'DQMC' .OR. CORRLEVEL .EQ. 'VMC' .OR. DFTC )  THEN
+                IF ( HUCKEL ) THEN
+                   Pup = DMAT/2.0d0
+                   Pdown = DMAT/2.0d0
+                ELSE
                    Pup = 0.0d0
                    Pdown = 0.0d0
+                ENDIF
+                IF ( .not. RESTRICT .OR. CORRLEVEL .EQ. 'DQMC' .OR. CORRLEVEL .EQ. 'VMC' .OR. DFTC )  THEN
                    IF ( .not. DFTC ) CALL URHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1, &
-                             & numprocessors,id,.TRUE.,.TRUE.,.FALSE.)
+                             & numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
 
-
+                  
                    IF ( DFTC ) CALL DFT(CORRLEVEL,NATOMS,ATOMS,BAS,S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD, &
-                   & NB,NRED,Ne,LORDER,CGORDER,LQ,CGQ,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,.TRUE.,.FALSE.)
+                   & NB,NRED,Ne,LORDER,CGORDER,LQ,CGQ,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
 
                    !====================
                    ! CALCULATING FORCES
@@ -637,7 +688,7 @@ PROGRAM uquantchem
                 IF ( (RESTRICT .AND. CORRLEVEL .EQ. 'CISD') .OR. (RESTRICT .AND.  CORRLEVEL .EQ. 'MP2')  ) THEN
                         ALLOCATE(EIGENVECT(NB,NB),EHFeigen(NB))
                         P = 0.0d0
-                        CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,.TRUE.,.FALSE.)
+                        CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
 
                         !====================
                         ! CALCULATING FORCES
@@ -703,34 +754,43 @@ PROGRAM uquantchem
                         !print*,'========================================================'
                         !print*,'  Tranfering (ij|kl) from vector to tensor form         '
                         !print*,'========================================================'
-                        ALLOCATE(Intsv(NRED))
-                        Intsv(:) = 0.0d0
-
-                       ! Here the Intsv is gathered together so that the entire tensor is available at all threads.
-                       ! In practice the doubles IntsvR(Istart:Iend) is sent from thread id to Intsv at thread = 0
-                       call MPI_GATHERV(IntsvR(Istart:Iend),scount,MPI_DOUBLE_PRECISION,Intsv,rcounts,displs,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-
-                        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-                        DEALLOCATE(IntsvR)
-                        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-                        
-                        CALL MPI_BCAST(Intsv,NRED,MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-                        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-                        
-                        ALLOCATE(Ints(NB,NB,NB,NB))
-               
-                        DO I=1,NB
-                                DO J=1,NB
-                                        DO K=1,NB
-                                                DO L=1,NB
-                                                        Ints(I,J,K,L) = Intsv(ijkl(I,J,K,L,NB))
-                                                ENDDO
-                                        ENDDO
-                                ENDDO
-                        ENDDO
                        
-                       DEALLOCATE(Intsv)
+                       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                        
+                       ALLOCATE(Intso(NRED),Intsoo(NRED))
+                       Intso = 0.0d0
+                       Intsoo = 0.0d0
+                       Ints  = 0.0d0
 
+
+                       DO KK=1,NONZERO
+                           I = IND1(KK)
+                           J = IND2(KK)
+                           K = IND3(KK)
+                           L = IND4(KK)
+                           Intso(ijkl(I,J,K,L,NB)) = IntsvR(KK)
+                       ENDDO
+
+                       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                       DEALLOCATE(IntsvR)
+
+                       CALL MPI_REDUCE(Intso,Intsoo,NRED,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD, ierr)
+                       
+                       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                       DEALLOCATE(Intso)
+
+                       CALL MPI_BCAST(Intsoo,NRED,MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+                       ALLOCATE(Ints(NB,NB,NB,NB))
+                       DO I=1,NB
+                        DO J=1,NB
+                         DO K=1,NB
+                          DO L=1,NB
+                           Ints(I,J,K,L) = Intsoo(ijkl(I,J,K,L,NB))
+                          ENDDO
+                         ENDDO
+                        ENDDO
+                       ENDDO
+                       DEALLOCATE(Intsoo)
                  ENDIF
 
 

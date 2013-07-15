@@ -1,12 +1,13 @@
-SUBROUTINE overlap(NATOMS,BAS,S,gradS)
+SUBROUTINE overlap(NATOMS,BAS,S,gradS,NSI,CFORCE)
       ! This subroutine calculates the overlap matrix
       USE datatypemodule
       IMPLICIT NONE
-      INTEGER :: NATOMS
+      INTEGER, INTENT(IN) :: NATOMS,NSI
+      LOGICAL, INTENT(IN) :: CFORCE
       DOUBLE PRECISION, EXTERNAL :: primoverlap
       EXTERNAL :: gradprimoverlap
       TYPE(BASIS), INTENT(IN) :: BAS
-      DOUBLE PRECISION, INTENT(OUT) :: S(BAS%NBAS,BAS%NBAS),gradS(NATOMS,3,BAS%NBAS,BAS%NBAS)
+      DOUBLE PRECISION, INTENT(OUT) :: S(BAS%NBAS,BAS%NBAS),gradS(NATOMS,3,NSI,NSI)
       INTEGER :: I,J,N,K,L1,M1,N1,L2,M2,N2,M
       DOUBLE PRECISION :: NO1,NO2,NP1,NP2,gradient(2,3)
       DOUBLE PRECISION :: A(3),B(3),alpha1,alpha2,coeff1,coeff2
@@ -49,19 +50,22 @@ SUBROUTINE overlap(NATOMS,BAS,S,gradS)
                                         !-----------------------------------------------------
                                         ! Here we calculate the gradient of the overlap matrix
                                         !-----------------------------------------------------
+                                        IF ( CFORCE ) THEN 
+                                           CALL gradprimoverlap(L1,M1,N1,A,alpha1,L2,M2,N2,B,alpha2,gradient)
                                         
-                                        CALL gradprimoverlap(L1,M1,N1,A,alpha1,L2,M2,N2,B,alpha2,gradient)
-                                        
-                                        gradS(BAS%PSI(I)%ATYPE,:,I,J) = gradS(BAS%PSI(I)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(1,:)
-                                        gradS(BAS%PSI(J)%ATYPE,:,I,J) = gradS(BAS%PSI(J)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(2,:)
+                                           gradS(BAS%PSI(I)%ATYPE,:,I,J) = gradS(BAS%PSI(I)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(1,:)
+                                           gradS(BAS%PSI(J)%ATYPE,:,I,J) = gradS(BAS%PSI(J)%ATYPE,:,I,J) + NO1*NO2*coeff1*coeff2*NP1*NP2*gradient(2,:)
+                                        ENDIF
                                 ENDDO
                         ENDDO
 
                         IF ( I .NE. J ) THEN 
                                 S(J,I) = S(I,J)
-                                DO M=1,NATOMS
+                                IF ( CFORCE ) THEN
+                                   DO M=1,NATOMS
                                         gradS(M,:,J,I) = gradS(M,:,I,J)
-                                ENDDO
+                                   ENDDO
+                                ENDIF
                                 !gradS(BAS%PSI(I)%ATYPE,:,J,I) = gradS(BAS%PSI(I)%ATYPE,:,I,J)
                                 !gradS(BAS%PSI(J)%ATYPE,:,J,I) = gradS(BAS%PSI(J)%ATYPE,:,I,J)
                         ENDIF

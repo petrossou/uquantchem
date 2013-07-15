@@ -18,7 +18,7 @@ FUNCTION quadcheck(CORRLEVEL,NATOMS,ATOMS,BAS,Pup,Pdown,LORDER,CGORDER,LQ,CGQ,NT
         INTEGER :: n,m,I,J,ierr
         DOUBLE PRECISION, PARAMETER :: PI = 3.1415926535897932384626433832795028841970d0
        
-        rcutt = 40.0d0 ! cuttoff radius in au for numerical quadrature
+        rcutt = 20.0d0 ! cuttoff radius in au for numerical quadrature
         
         quadcheck = 0.0d0
         quadcheckthread = 0.0d0

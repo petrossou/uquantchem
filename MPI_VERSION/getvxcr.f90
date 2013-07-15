@@ -26,8 +26,17 @@ SUBROUTINE getvxcr(CORRLEVEL,NATOMS,BAS,Pup,Pdown,r,Vxcr)
         ! In the case of PBE or B3LYP, this corresponds to the 
         ! tilde part of the potentail described at page 158, just 
         ! after Eqn (8.14) in Martin's "Electronic Structure"
-
-        CALL vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
+        
+        densu = rho(BAS,Pup,r)
+        densd = rho(BAS,Pdown,r)
+        IF ( CORRLEVEL .EQ. 'PBE') CALL gradrho(BAS,Pup+Pdown,r,gdens)
+        IF ( CORRLEVEL .EQ. 'B3LYP' ) THEN
+                        CALL gradrho(BAS,Pup,r,gdensu)
+                        CALL gradrho(BAS,Pdown,r,gdensd)
+                        gdens = gdensu + gdensd
+        ENDIF
+        !CALL vxc(CORRLEVEL,BAS,Pup,Pdown,r,V)
+        CALL vxc(CORRLEVEL,BAS,densu,densd,gdensu,gdensd,r,V)
 
         ! Calculating the derivatives of the Exchange-Correlation energies 
         ! with respect to the length of the gradient of the respective
@@ -35,9 +44,9 @@ SUBROUTINE getvxcr(CORRLEVEL,NATOMS,BAS,Pup,Pdown,r,Vxcr)
 
         IF ( CORRLEVEL .EQ. 'PBE' .OR. CORRLEVEL .EQ. 'B3LYP' ) THEN
                
-                densu = rho(BAS,Pup,r)
-                densd = rho(BAS,Pdown,r)
-                CALL gradrho(BAS,Pup+Pdown,r,gdens)
+                !densu = rho(BAS,Pup,r)
+                !densd = rho(BAS,Pdown,r)
+                !CALL gradrho(BAS,Pup+Pdown,r,gdens)
                 lengthgd = sqrt(DOT_PRODUCT(gdens,gdens))
                 
                 IF ( CORRLEVEL .EQ. 'PBE' ) THEN
@@ -45,8 +54,8 @@ SUBROUTINE getvxcr(CORRLEVEL,NATOMS,BAS,Pup,Pdown,r,Vxcr)
                 ENDIF
 
                 IF ( CORRLEVEL .EQ. 'B3LYP' ) THEN
-                        CALL gradrho(BAS,Pup,r,gdensu)
-                        CALL gradrho(BAS,Pdown,r,gdensd)
+                        !CALL gradrho(BAS,Pup,r,gdensu)
+                        !CALL gradrho(BAS,Pdown,r,gdensd)
                         
                         lengthgdu = sqrt(DOT_PRODUCT(gdensu,gdensu))
                         lengthgdd = sqrt(DOT_PRODUCT(gdensd,gdensd))
