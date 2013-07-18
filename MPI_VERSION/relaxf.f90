@@ -38,7 +38,8 @@ SUBROUTINE relaxf(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DI
         SCRATCH = .TRUE.
         NLITER = 10
         ST = .TRUE.
-
+        Pup = 0.0d0
+        Pdown = 0.0d0
         NDIAG = ( NB*(NB+1) )/2
         ALLOCATE(dInts(NDIAG))
 

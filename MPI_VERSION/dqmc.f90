@@ -63,7 +63,7 @@ SUBROUTINE dqmc(N,BJASTROW,CJASTROW,NATOMS,Cup,Cdown,BAS,ATOMS,beta,SAMPLERATE,N
         first = .TRUE.
         ALLDEAD = .FALSE.
         LOCKED = .FALSE.
-
+        IF ( NREPLICAS .LT. numprocessors ) NREPLICAS = numprocessors
         ! Allocating some variables:
         N3 = 3*N
         NREP2 = 2*NREPLICAS
@@ -391,7 +391,12 @@ ENDIF !-final part of restart if-conditional
                         IF ( .not. RESTART ) THEN
                                 IF ( I .EQ. 2 .AND. J .EQ. 1 ) THEN
                                         call random_seed(size=M)
-                                        ALLOCATE(seed(M))
+                                        IF ( .not. ALLOCATED(seed) ) THEN 
+                                           ALLOCATE(seed(M))
+                                        ELSE
+                                           DEALLOCATE(seed)
+                                           ALLOCATE(seed(M))
+                                        ENDIF
                                         CALL SYSTEM_CLOCK(COUNT=clock)
                                         seed = clock + (37+id)* (/ (i - 1, i = 1, M) /)
                                         CALL RANDOM_SEED(PUT = seed )
@@ -400,7 +405,12 @@ ENDIF !-final part of restart if-conditional
                         ELSE
                                 IF ( I .EQ. NBEGIN .AND. J .EQ. 1 ) THEN
                                         call random_seed(size=M)
-                                        ALLOCATE(seed(M))
+                                        IF ( .not. ALLOCATED(seed) ) THEN
+                                            ALLOCATE(seed(M))
+                                        ELSE
+                                            DEALLOCATE(seed)
+                                            ALLOCATE(seed(M))
+                                        ENDIF
                                         CALL SYSTEM_CLOCK(COUNT=clock)
                                         seed = clock + (37+id)* (/ (i - 1, i = 1, M) /)
                                         CALL RANDOM_SEED(PUT = seed )
@@ -980,7 +990,10 @@ ENDIF !-final part of restart if-conditional
                    ! then we have to reallcoate the size of the arrays
                    IF ( SUM(COUNC) .GT. NREP2 ) THEN 
                        NEWARRAYSIZE = SUM(COUNC)
-                       DEALLOCATE(xstartc,NEWWEIGHTC,NREJECTNEWC)
+                       IF ( ALLOCATED(xstartc) )     DEALLOCATE(xstartc)
+                       IF ( ALLOCATED(NEWWEIGHTC) )  DEALLOCATE(NEWWEIGHTC)
+                       IF ( ALLOCATED(NREJECTNEWC) ) DEALLOCATE(NREJECTNEWC)
+                          
                        ALLOCATE(xstartc(N3,NEWARRAYSIZE),NEWWEIGHTC(NEWARRAYSIZE),NREJECTNEWC(NEWARRAYSIZE))
                    ELSE
                        NEWARRAYSIZE = NREP2
@@ -1064,8 +1077,20 @@ ENDIF !-final part of restart if-conditional
            EDQMC = 0.0d0
            II = 0
 
-           ALLOCATE(EG(NTIMESTEPS),EM(NTIMESTEPS))
+           IF ( .not. ALLOCATED(EG) ) THEN
+               ALLOCATE(EG(NTIMESTEPS))
+           ELSE
+               DEALLOCATE(EG)
+               ALLOCATE(EG(NTIMESTEPS))
+           ENDIF
      
+           IF ( .not. ALLOCATED(EM) ) THEN
+               ALLOCATE(EM(NTIMESTEPS))
+           ELSE
+               DEALLOCATE(EM)
+               ALLOCATE(EM(NTIMESTEPS))
+           ENDIF
+
            EG(:) = 0.0d0
            EM(:) = 0.0d0
 

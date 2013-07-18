@@ -33,6 +33,8 @@ SUBROUTINE relax(gradS,gradT,gradV,S,H0,NB,NRED,Ne,nucE,Tol,FTol,MIX,DIISORD,DII
         ST = .TRUE.
         NPOINTS = NLSPOINTS
         POLYORDER = PORDER
+        Pup = 0.0d0
+        Pdown = 0.0d0
 
         NDIAG = ( NB*(NB+1) )/2
         ALLOCATE(dInts(NDIAG))
