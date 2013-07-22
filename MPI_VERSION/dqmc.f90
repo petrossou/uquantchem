@@ -626,7 +626,7 @@ ENDIF !-final part of restart if-conditional
 
                         NUMBEROFNEWWALKERS = NINT(WEIGHT(J))
                         
-                        IF ( WEIGHT(J) .GT. 1.0d0*NREPLICAS ) THEN
+                        IF ( WEIGHT(J) .GT. 1.0d0*NREPLICAS .OR. WEIGHT(J) .NE. WEIGHT(J) ) THEN
                            SINNGULAR2 = .TRUE.
                            SINNGULAR1 = .TRUE.
                            WEIGHT(J) = 0.0d0

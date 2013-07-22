@@ -22,7 +22,7 @@ FUNCTION EL(N,N3,NATOMS,Cup,Cdown,BAS,ATOMS,b,c,r)
         DOUBLE PRECISION :: rij, V(3), U(3), W(3),POTE,TRFKN
         
         POTE = 0.0d0
-
+        EL = 0.0d0
         ! Calculation of the electron-electron contribution 
         ! to the local energy and the electron-nucleon contribution
         
