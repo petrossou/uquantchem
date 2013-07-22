@@ -49,7 +49,7 @@ SUBROUTINE dqmc(N,BJASTROW,CJASTROW,NATOMS,Cup,Cdown,BAS,ATOMS,beta,SAMPLERATE,N
         LOGICAL :: REDISTRIBUTED,DISTR,DEBUGGRANDOM,ALLDEAD,LOCKED
         LOGICAL :: first,NEXTSTEP,SINNGULAR1,SINNGULAR2,RESTART,finns
         DOUBLE PRECISION :: rvect(3),vvect(3),vlength,zvect(3),vect(3),distance,rnuc(3),z,zetaa,aa,vmeanvect(3),vmeanz,vmeanrho,rhovect(3),ratio
-        DOUBLE PRECISION :: zbis, rhobis,dr(3),rprim(3),RANDDIR(3),ppobability,SR,SRP,rvectp(3),G1,G2,WTOT
+        DOUBLE PRECISION :: zbis, rhobis,dr(3),rprim(3),RANDDIR(3),ppobability,SR,SRP,rvectp(3),G1,G2,WTOT,EFIALTHS1,EFIALTHS2
         DOUBLE PRECISION, ALLOCATABLE :: VBIG(:), VBIGMEAN(:),VBIGP(:), VBIGMEANP(:),WEIGHT(:),NEWWEIGHT(:),xkilled(:,:),WTOTC(:),EKILLED(:),WKILLED(:),WKILLEDOLD(:)
         DOUBLE PRECISION, ALLOCATABLE :: NEWWEIGHTC(:),xstartc(:,:),density(:,:,:),densityc(:,:,:)
         INTEGER :: KK,atomnr,NKILLW,NKILLOLD,NEWARRAYSIZE,NSTUCK,NPOPMIN,ISAVED
@@ -66,8 +66,10 @@ SUBROUTINE dqmc(N,BJASTROW,CJASTROW,NATOMS,Cup,Cdown,BAS,ATOMS,beta,SAMPLERATE,N
         IF ( NREPLICAS .LT. numprocessors ) NREPLICAS = numprocessors
         ! Allocating some variables:
         N3 = 3*N
-        NREP2 = 2*NREPLICAS
-        NPOPMIN = 2*NREPLICAS
+        ! In order to fix the problems occuring on abisko and the cpc-library cluster.
+        ! We have here increased NREP2 from 2*NREPLICAS to 10*NREPLICAS
+        NREP2 = 10*NREPLICAS
+        NPOPMIN = 10*NREPLICAS
         NTOOLD = 0
 
         ALLOCATE(xt(N3),xtrial(N3),xstart(N3,NREP2),xstartc(N3,NREP2),offset(numprocessors),NKILLWC(numprocessors),NREJECTMERGED(NREP2),OLDWEIGHT(NREP2))
@@ -376,6 +378,8 @@ ENDIF !-final part of restart if-conditional
         NKILLW = 0
         NMERGED = 0
         DO I=NBEGIN,NTIMESTEPS
+                ! In order to fix the problems occuring on abisko and the cpc-library cluster.
+                IF ( ER(I-1) .GT. 0.0d0 .AND. I .GT. 2 ) ER(I-1) = ER(I-2)
                 IF ( id .EQ. 0 ) WRITE(12,'(I20,F30.20,F30.20,F30.20,I20,I10,I10)')I,ET+nucE,ER(I-1)+nucE,E(I-1)+nucE,NWALKTOT,NWALKTOTKILLED,NMERGED
              20 CONTINUE    
                 COUN = 0
@@ -622,11 +626,30 @@ ENDIF !-final part of restart if-conditional
 
                         V = 0.50d0*(SRP + SR)*ppobability + (1-ppobability)*SR
 
-                        WEIGHT(J) = WEIGHT(J)*exp(TAUEFF*V)   ! (38)
+                        EFIALTHS1 = DEXP(TAUEFF*SRP)
+                        EFIALTHS2 = DEXP(TAUEFF*SR)
+                        
+                        !===================================================================
+                        ! This was added to deal with the problems occuring on
+                        ! the abisko and cpc-library clusters
+                        !===================================================================
+                        IF ( EFIALTHS1 .NE. EFIALTHS1 .AND. EFIALTHS2 .EQ.  EFIALTHS2 ) THEN
+                               V = SR
+                               ppobability = 0.0d0
+                        ENDIF
+
+                        IF ( EFIALTHS1 .EQ. EFIALTHS1 .AND. EFIALTHS2 .NE.  EFIALTHS2 ) THEN
+                               V = SRP
+                               ppobability = 1.0d0
+                        ENDIF
+                        !===================================================================
+
+
+                        WEIGHT(J) = WEIGHT(J)*DEXP(TAUEFF*V)   ! (38)
 
                         NUMBEROFNEWWALKERS = NINT(WEIGHT(J))
                         
-                        IF ( WEIGHT(J) .GT. 1.0d0*NREPLICAS .OR. WEIGHT(J) .NE. WEIGHT(J) ) THEN
+                        IF ( WEIGHT(J) .GT. 1.0d0*NREPLICAS .OR. WEIGHT(J) .NE.  WEIGHT(J) ) THEN
                            SINNGULAR2 = .TRUE.
                            SINNGULAR1 = .TRUE.
                            WEIGHT(J) = 0.0d0
@@ -846,11 +869,19 @@ ENDIF !-final part of restart if-conditional
                 
                 IF ( TAUEFF .EQ. 0.0d0 ) TAUEFF = DT
 
-                IF ( MOD(I,NRECALC) .EQ. 0 ) THEN
-                      ER(I) = ET - (1.0d0/(1.0d0*NRECALC*TAUEFF))*log(1.0d0*TOTALVIKT/(1.0d0*NREPLICAS))
+                CORRECTION = (1.0d0/(1.0d0*NRECALC*TAUEFF))*log(1.0d0*TOTALVIKT/(1.0d0*NREPLICAS))
+                
+                ! The extra conditional for the CORRECTION has been added to remedy the problems
+                ! appearing on abisko and the cpc-library cluster
+                IF ( MOD(I,NRECALC) .EQ. 0 .AND. DABS(CORRECTION/ER(I-1)) .LT. CUTTOFFFACTOR ) THEN
+                      ER(I) = ET - CORRECTION
                 ELSE
-                      IF ( TOTALVIKT .GT. 0.0d0 ) THEN
-                          CORRECTION = beta*(1.0d0/(1.0d0*NRECALC*TAUEFF))*log(1.0d0*TOTALVIKT/(1.0d0*NREPLICAS))
+
+                      CORRECTION = beta*(1.0d0/(1.0d0*NRECALC*TAUEFF))*log(1.0d0*TOTALVIKT/(1.0d0*NREPLICAS))
+
+                      ! The extra conditional for the CORRECTION has been added to remedy the problems
+                      ! appearing on abisko and the cpc-library cluster
+                      IF ( TOTALVIKT .GT. 0.0d0 .AND. DABS(CORRECTION/ER(I-1)) .LT. CUTTOFFFACTOR ) THEN
                           IF ( .not. RESTART ) ER(I) = SUM(ER)/(I-1) - CORRECTION
                           ! Restarting the calculation does not work with 
                           ! the above way of calculating the mean value of ER, ie SUM(ER)/(I-1),
