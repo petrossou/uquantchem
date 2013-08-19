@@ -26,8 +26,8 @@ SOURCE = datatypemodule.o exchcorrmodule.o random.o Afunc.o RHF.o Fnurec.o Fnu.o
 	 findclosestatom.o ROOTWEIGHTMAX3.o readbasis.o primpotential.o primoverlap.o primkinetic.o MP2.o uquantchem.o \
 	 gradprimoverlap.o gradprimkinetic.o gradprimpotential.o gradprimeeintegral.o forces.o dAfunc.o relax.o linesearchmin.o \
 	 massa.o moleculardynamics.o moleculardynamicssoft.o invert.o vxc.o vxcalt.o dvxc.o ngbasfunkval.o nggradbasfunkval.o nglaplacebasfunkval.o \
-	 getvxcr.o atomicradii.o lebedev.o chebgauss.o sofmu.o pvoronoi.o getvxc.o excdens.o excdr.o exc.o DFT.o quadcheck.o TRACE.o \
-	 hessianbasfunk.o hessianrho.o dftforcedens.o getxcforce.o pnonorm.o tmu.o gradpvoronoi.o relaxf.o
+	 getvxcr.o atomicradii.o lebedev1.o lebedev2.o lebedev3.o lebedev4.o lebedev5.o chebgauss.o sofmu.o pvoronoi.o getvxc.o excdens.o excdr.o exc.o DFT.o quadcheck.o TRACE.o \
+	 hessianbasfunk.o hessianrho.o dftforcedens.o getxcforce.o pnonorm.o tmu.o gradpvoronoi.o relaxf.o mulliken.o
 
 all: lapack_install blas_install uquantchem
 
@@ -50,8 +50,20 @@ clean:
 %.o: %.f90
 	$(FC) $(LIB) $(FFLAGS) $(OFLAG) -c $<
 
-lebedev.o: lebedev.f90
-	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev.f90
+lebedev1.o: lebedev1.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev1.f90
+
+lebedev2.o: lebedev2.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev2.f90
+
+lebedev3.o: lebedev3.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev3.f90
+
+lebedev4.o: lebedev4.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev4.f90
+
+lebedev5.o: lebedev5.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev5.f90
 
 getxcforce.o: getxcforce.f90
 	$(FC) -ffree-form -ffree-line-length-none -c getxcforce.f90
