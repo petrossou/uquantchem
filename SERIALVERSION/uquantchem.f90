@@ -16,7 +16,7 @@ PROGRAM uquantchem
       DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),Intsv(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsv(:,:,:),DMAT(:,:)
       DOUBLE PRECISION, ALLOCATABLE :: gradS(:,:,:,:),gradT(:,:,:,:),gradV(:,:,:,:)
       DOUBLE PRECISION, ALLOCATABLE :: EHFeigenup(:),EHFeigendown(:),Cup(:,:),Cdown(:,:)
-      DOUBLE PRECISION, ALLOCATABLE :: EHFeigen(:),P(:,:),Pup(:,:),Pdown(:,:),C1(:,:),C2(:,:),force(:,:),CN(:),LQ(:,:),CGQ(:,:)
+      DOUBLE PRECISION, ALLOCATABLE :: EHFeigen(:),P(:,:),Pup(:,:),Pdown(:,:),C1(:,:),C2(:,:),force(:,:),CN(:),LQ(:,:),CGQ(:,:),ZMUL(:)
       DOUBLE PRECISION  :: PRYSR(25,25),PRYSW(25,25),rts(25),wts(25),TOTALTIME,ECISD,LIMITS(3),ENEXCM,EMP2,TIMESTEP,TEND,TSTART,DR,FTol,CNSTART(4),alphastart,kappastart
       DOUBLE PRECISION :: ESIGMA,EDQMC,a,b,BETA,BJASTROW,CJASTROW,NPERSIST,CUTTOFFFACTOR,MIX,Aexpan,LAMDA,rc,GAMA,BETAA,POLY(6),deltar,TEMPERATURE,kappa,alpha,EETOL
       INTEGER :: STARTTIME(8),STOPTIME(8),RUNTIME(8),NEEXC,SAMPLERATE,NREPLICAS,NRECALC,DIISORD,DIISSTART,NTIMESTEPS,NSCF,PULAY,FIXNSCF,DORDER
@@ -43,7 +43,7 @@ PROGRAM uquantchem
         
       CALL checkinputfile(NLINES,NATOMS)
       
-      ALLOCATE(ATOMICNUMBERS(NATOMS),APOS(NATOMS,3),ATOMS(NATOMS),force(NATOMS,3))
+      ALLOCATE(ATOMICNUMBERS(NATOMS),APOS(NATOMS,3),ATOMS(NATOMS),force(NATOMS,3),ZMUL(NATOMS))
       
       CALL readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBERS,APOS,Ne,Tol,WRITECICOEF,WRITEDENS,WHOMOLUMO,MESH,LIMITS,LEXCSP,NEEXC,ENEXCM,SPINCONSERVE,RESTRICT,APPROXEE, &
       & SAMPLERATE,NREPLICAS,TIMESTEP,TEND,TSTART,BETA,BJASTROW,CJASTROW,NPERSIST,NRECALC,CUTTOFFFACTOR,MIX,DIISORD,DIISSTART,HYBRID,rc,CORRALCUSP,NVMC,HFORBWRITE,IOSA,CFORCE,RELAXN,NSTEPS,DR,FTol, &
@@ -65,7 +65,11 @@ PROGRAM uquantchem
               CGORDER = NCHEBGAUSS
               LORDER  = LEBPOINTS(NLEBEDEV)
               ALLOCATE(LQ(LORDER,3),CGQ(CGORDER,2))
-              CALL lebedev(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 1  .AND. NLEBEDEV .LE. 5   ) CALL lebedev1(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 6  .AND. NLEBEDEV .LE. 10  ) CALL lebedev2(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 11 .AND. NLEBEDEV .LE. 15  ) CALL lebedev3(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 16 .AND. NLEBEDEV .LE. 20  ) CALL lebedev4(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 21 .AND. NLEBEDEV .LE. 24  ) CALL lebedev5(NLEBEDEV,LORDER,LQ)
               CALL chebgauss(CGORDER,CGQ)
       ELSE
               CGORDER = 1
@@ -389,6 +393,7 @@ PROGRAM uquantchem
                 P = 0.0d0
                 CALL RHF(S,H0,Intsv,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1, .TRUE., .TRUE.,.FALSE. )
                 
+                IF ( NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
                 !====================
                 ! CALCULATING FORCES
                 !================================================================================================================== 
@@ -430,9 +435,12 @@ PROGRAM uquantchem
                         Pdown = 0.0d0
                         IF ( .not. DFTC ) CALL URHF(S,H0,Intsv,NB,NRED,Ne,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1,.TRUE., .TRUE.,.FALSE. )
                         
+                        
                         IF ( DFTC ) CALL DFT(CORRLEVEL,NATOMS,ATOMS,BAS,S,gradS,H0,Intsv,NB,NRED,Ne,LORDER,CGORDER,LQ,CGQ,nucE,Tol,EHFeigenup,EHFeigendown, &
                         & ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1,.TRUE.,.TRUE.,.FALSE.)
 
+                        IF ( NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,Pup+Pdown,S,ZMUL)
+                        
                         !====================
                         ! CALCULATING FORCES
                         !==================================================================================================================
@@ -459,6 +467,8 @@ PROGRAM uquantchem
                         P = 0.0d0
                         CALL RHF(S,H0,Intsv,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,.TRUE., .TRUE.,.FALSE. )
                         
+                        IF ( NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
+
                         !====================
                         ! CALCULATING FORCES
                         !==================================================================================================================

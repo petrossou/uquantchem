@@ -19,7 +19,7 @@ PROGRAM uquantchem
       DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),Intsv(:),IntsvR(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsvR(:,:,:),HUCKELH(:,:),CHUCKEL(:,:),EHUCKEL(:)
       DOUBLE PRECISION, ALLOCATABLE :: gradS(:,:,:,:),gradT(:,:,:,:),gradV(:,:,:,:),DMAT(:,:),CHUCKEL2(:,:),dInts(:),Intso(:),Intsoo(:)
       DOUBLE PRECISION, ALLOCATABLE :: EHFeigenup(:),EHFeigendown(:),Cup(:,:),Cdown(:,:)
-      DOUBLE PRECISION, ALLOCATABLE :: EHFeigen(:),P(:,:),Pup(:,:),Pdown(:,:),C1(:,:),C2(:,:),force(:,:),CN(:),LQ(:,:),CGQ(:,:)
+      DOUBLE PRECISION, ALLOCATABLE :: EHFeigen(:),P(:,:),Pup(:,:),Pdown(:,:),C1(:,:),C2(:,:),force(:,:),CN(:),LQ(:,:),CGQ(:,:),ZMUL(:)
       DOUBLE PRECISION  :: PRYSR(25,25),PRYSW(25,25),rts(25),wts(25),TOTALTIME,ECISD,LIMITS(3),ENEXCM,EMP2,TIMESTEP,TEND,TSTART,CUTTOFFFACTOR,MIX,Aexpan,LAMDA,rc,INFOH,HK
       DOUBLE PRECISION :: ESIGMA,EDQMC,a,b,BETA,BJASTROW,CJASTROW,GAMA,BETAA,POLY(6),deltar,DR,FTol,TEMPERATURE,kappa,alpha,EETOL,CNSTART(4),alphastart,kappastart
       INTEGER :: STARTTIME(8),STOPTIME(8),RUNTIME(8),NEEXC,SAMPLERATE,NREPLICAS,NRECALC,scount,DIISORD,DIISSTART,NTIMESTEPS,NSCF,PULAY,FIXNSCF,DORDER
@@ -50,7 +50,7 @@ PROGRAM uquantchem
         
       CALL checkinputfile(NLINES,NATOMS)
       
-      ALLOCATE(ATOMICNUMBERS(NATOMS),APOS(NATOMS,3),ATOMS(NATOMS),force(NATOMS,3))
+      ALLOCATE(ATOMICNUMBERS(NATOMS),APOS(NATOMS,3),ATOMS(NATOMS),force(NATOMS,3),ZMUL(NATOMS))
       ALLOCATE(N0p(numprocessors),rcounts(numprocessors),displs(numprocessors),Istart2(numprocessors),Istart3(numprocessors))
       
       CALL readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBERS,APOS,Ne,Tol,WRITECICOEF,WRITEDENS,WHOMOLUMO,MESH,LIMITS,LEXCSP,NEEXC,ENEXCM,SPINCONSERVE,RESTRICT,APPROXEE, &
@@ -74,7 +74,11 @@ PROGRAM uquantchem
               CGORDER = NCHEBGAUSS
               LORDER  = LEBPOINTS(NLEBEDEV)
               ALLOCATE(LQ(LORDER,3),CGQ(CGORDER,2))
-              CALL lebedev(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 1  .AND. NLEBEDEV .LE. 5   ) CALL lebedev1(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 6  .AND. NLEBEDEV .LE. 10  ) CALL lebedev2(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 11 .AND. NLEBEDEV .LE. 15  ) CALL lebedev3(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 16 .AND. NLEBEDEV .LE. 20  ) CALL lebedev4(NLEBEDEV,LORDER,LQ)
+              IF ( NLEBEDEV .GE. 21 .AND. NLEBEDEV .LE. 24  ) CALL lebedev5(NLEBEDEV,LORDER,LQ) 
               CALL chebgauss(CGORDER,CGQ)
               NTOTALQUAD = CGORDER*LORDER*NATOMS
               
@@ -596,7 +600,8 @@ PROGRAM uquantchem
                    P = 0.0d0
                 ENDIF
                 CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
-
+               
+                IF ( id .EQ. 0 .AND. NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
                 !====================
                 ! CALCULATING FORCES
                 !================================================================================================================== 
@@ -654,7 +659,8 @@ PROGRAM uquantchem
                   
                    IF ( DFTC ) CALL DFT(CORRLEVEL,NATOMS,ATOMS,BAS,S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,Q1,Q2,Q3,Qstart,Qend,NTOTALQUAD, &
                    & NB,NRED,Ne,LORDER,CGORDER,LQ,CGQ,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
-
+                   
+                   IF ( id .EQ. 0 .AND. NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,Pup+Pdown,S,ZMUL)
                    !====================
                    ! CALCULATING FORCES
                    !================================================================================================================== 
@@ -690,6 +696,7 @@ PROGRAM uquantchem
                         P = 0.0d0
                         CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
 
+                        IF ( id .EQ. 0 .AND. NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
                         !====================
                         ! CALCULATING FORCES
                         !================================================================================================================== 
