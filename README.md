@@ -1,6 +1,8 @@
-##########################################################
-#  Compilation instructions for the uquantchem V.28 code #
-##########################################################
+##################################################################
+#  General compilation instructions for the uquantchem V.28 code #
+##################################################################
+#      	   Petros Souvatzis Thu Jul 18 09:27:11 CEST 2013 	 #
+##################################################################
 
 To compile the uquantchem code you need to have the 
 gfortran compiler installed on your system. The lapack 
@@ -85,14 +87,19 @@ TESTS/RUN1,TESTS/RUN2, ... , TESTS/RUN7
 of the UQUANTCHEM/ directory. The respective pre-calulated 
 output files are named OUT.1.dat, OUT.2.dat, ... , OUT.7.dat.
 
-In order to run these test calculations for the openmpi version
-issue the following comands: 
+In order to run these test calculations one at a time, 
+for the openmpi version issue the following comands: 
 (for example the test calculation in the dir TESTS/RUN1)
 
 (1) cd UQUANTCHEM/TESTS/RUN1
 
 (2) ./run
- 
+
+In order to run the test calculations "automatically"
+in the home directory of UQAUNTCHEM execute the command:
+
+./runtests.pl
+
 ##############################################################
 
 Below follow a short description of these test calculations:
@@ -123,3 +130,6 @@ If you instead want to run the serial version when performing
 the test calculations, instead of the command "./run" execute 
 the command ../../SERIALVERSION/uquantchem.s
 
+Good Luck!
+
+Petros
