@@ -53,8 +53,8 @@ SUBROUTINE DFT(CORRLEVEL,NATOMS,ATOMS,NTOTALQUAD,Q1,Q2,Q3,BAS,S,gradS,H0,Intsv,N
               DIISORD = 25
       ENDIF
 
-      Neup   = ( Ne + MOD(Ne,2) )/2
-      Nedown = ( Ne - MOD(Ne,2) )/2
+      Neup   = ( Ne - MOD(Ne,2) )/2
+      Nedown = ( Ne + MOD(Ne,2) )/2
 
       Pups = 0.0d0
       Pdowns = 0.0d0

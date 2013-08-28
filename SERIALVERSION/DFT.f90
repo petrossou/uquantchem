@@ -52,8 +52,8 @@ SUBROUTINE DFT(CORRLEVEL,NATOMS,ATOMS,BAS,S,gradS,H0,Intsv,NB,NRED,Ne,LORDER,CGO
               DIISORD = 25
       ENDIF
 
-      Neup   = ( Ne + MOD(Ne,2) )/2
-      Nedown = ( Ne - MOD(Ne,2) )/2
+      Neup   = ( Ne - MOD(Ne,2) )/2
+      Nedown = ( Ne + MOD(Ne,2) )/2
 
       Pups = 0.0d0
       Pdowns = 0.0d0
