@@ -1,0 +1,54 @@
+############################################
+# INSTALLATION INSTRUCTIONS FOR UQUANTCHEM #
+############################################
+
+To install the uquantchem do the following:
+
+(1) Select which version you want to install,
+the serial, openmp or mpi-version 
+
+(2) Depending on your choice in (1) to either:
+    
+cd SERIALVERSION/ 
+or 
+cd OPENMPVERSION/
+or cd 
+MPI_VERSION/
+
+(3) Depending on the system specifications 
+cp the "Makefile.compiler.version" to the
+Makefile  (compiler = gfortran, ifort )
+(version = serial,openmp,mpi)
+
+(4) You need to edit the Makefile depending
+on weather or not lapack and blas libraries
+exist on your machine and weather or not the 
+path to these libraries exist in your PATH
+you need to edit the Makefile accordingly.
+
+If you want to install the gfortran-stand-allone 
+version of uquantchem, which assumes no preexisting 
+lapack and blas libraries, perform the following 
+changes to the Makefile:
+
+Change the lines:
+
+LAPACKPATH = /Users/petros/UQUANTCHEM/Src/V.21/lapack-3.4.0
+BLASPATH = /Users/petros/UQUANTCHEM/Src/V.21/BLAS
+
+to:
+
+LAPACKPATH = /where-uquantchem-residesi-on-your-machine/V.35/lapack-3.4.0
+BLASPATH = /where-uquantchem-resides-on-your-machine/V.35/BLAS
+
+(5) Finally you are ready to compile, by doing the following:
+
+	(a) For installation of gfortran-stand-allone version type:  make all
+
+	(b) For installation with preexisting lapack and blas: make uquantchem
+
+
+Best of whiches and good luck,
+	
+		Petros Souvatzis
+

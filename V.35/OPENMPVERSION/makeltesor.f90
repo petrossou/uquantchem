@@ -1,0 +1,19 @@
+SUBROUTINE makeltesor(COEFF,BASLT,NB,LTESOR)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: NB
+      DOUBLE PRECISION, INTENT(IN) :: COEFF(NB,NB),BASLT(3,NB,NB)
+      DOUBLE PRECISION, INTENT(OUT) :: LTESOR(3,NB,NB)
+      INTEGER :: I,J
+
+      DO I=1,NB
+         DO J=1,NB
+            LTESOR(1,I,J) = DOT_PRODUCT(COEFF(:,I),MATMUL(BASLT(1,:,:),COEFF(:,J)))
+            LTESOR(2,I,J) = DOT_PRODUCT(COEFF(:,I),MATMUL(BASLT(2,:,:),COEFF(:,J)))
+            LTESOR(3,I,J) = DOT_PRODUCT(COEFF(:,I),MATMUL(BASLT(3,:,:),COEFF(:,J)))
+         ENDDO
+      ENDDO
+
+END SUBROUTINE makeltesor
+           
+
+

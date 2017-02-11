@@ -1,0 +1,12 @@
+DFT.f90:      INTEGER*8, INTENT(IN) :: NRED
+eeints.f90:      INTEGER*8, INTENT(IN) :: NRED,FNRED
+forces.f90:      INTEGER*8, INTENT(IN) :: NRED
+getJv.f90:      INTEGER*8, INTENT(IN) :: NRED
+getKv.f90:      INTEGER*8, INTENT(IN) :: NRED
+moleculardynamics.f90:        INTEGER*8, INTENT(IN) :: NRED
+moleculardynamicssoft.f90:        INTEGER*8, INTENT(IN) :: NRED
+relax.f90:        INTEGER*8, INTENT(IN) :: NRED
+relaxf.f90:        INTEGER*8, INTENT(IN) :: NRED
+RHF.f90:      INTEGER*8, INTENT(IN) :: NRED
+uquantchem.f90:      INTEGER*8 :: NRED,FNRED
+URHF.f90:      INTEGER*8, INTENT(IN) :: NRED

@@ -1,0 +1,74 @@
+SUBROUTINE DIISc(NB,N,ERR,Pprevious,PNEW,LAMDA,INFO)
+     ! This is the direct inversion in the iterative subspace method DIIS,
+     ! by P. Puley in CHEM. Phys. Lett. 73, 393 (1984). The routine is 
+     ! used to estimate the self-consistent density-matrix in the region 
+     ! where the density dependence of the energy can be approximated well
+     ! up to second order.
+     ! Also, see T. Halgaker, P. Jorgensen and J. Olsen 
+     ! "Molecular Electronic Structure Theory" p.460-463
+     IMPLICIT NONE
+     INTEGER, INTENT(IN) :: NB,N
+     COMPLEX*16, INTENT(IN) :: Pprevious(50,NB,NB),ERR(50,NB,NB)
+     COMPLEX*16, INTENT(OUT) :: PNEW(NB,NB)
+     DOUBLE PRECISION, INTENT(OUT) :: LAMDA
+     INTEGER, INTENT(OUT) :: INFO
+     COMPLEX*16, ALLOCATABLE :: DP(:,:),B(:,:),BINV(:,:),ALPHA(:),C(:),EIGENVECT(:,:)
+     DOUBLE PRECISION, ALLOCATABLE :: EIGENVAL(:)
+     DOUBLE PRECISION :: CONDNUMBER 
+     INTEGER :: I,J,K,NN,NH,LDA,LDB,NRHS
+     INTEGER, ALLOCATABLE :: IPIV(:)
+     EXTERNAL :: DGESV
+
+     IF ( N .GT. 50 ) THEN
+        WRITE(*,*)'Error in DIISc.f90, maximum dimension of subspace is 50!'
+        STOP
+     ENDIF
+
+     NN = NB*NB
+     NH = N
+     
+     ALLOCATE(DP(NH,NN),B(NH+1,NH+1),ALPHA(NH+1),BINV(NH+1,NH+1),C(NH+1),IPIV(NH+1),EIGENVAL(NH+1),EIGENVECT(NH+1,NH+1))
+    
+     
+     ! Calculating the matrix B ( Eq. (6) in CHEM. Phys. Lett. 73, 393 (1984) )
+     DO I =1,NH
+      DO J=1,NH
+         B(I,J) = SUM(ERR(I,:,:)*ERR(J,:,:))
+      ENDDO
+     ENDDO
+
+     B(NH+1,:) = -1.0d0
+     B(:,NH+1) = -1.0d0
+     B(NH+1,NH+1) = 0.0d0
+     C = 0.0d0 
+     C(NH+1) = -1.0d0
+
+     BINV = B
+     ALPHA = C
+     
+     LDA = NH+1
+     LDB = NH+1
+     NRHS = 1
+
+     CALL diaghc( B,NH+1,EIGENVAL,EIGENVECT,INFO)
+     CONDNUMBER = DABS(MAXVAL(EIGENVAL)/MINVAL(EIGENVAL))
+
+     ! Solving B*ALPHA = C 
+     IF ( CONDNUMBER .LE. 100.0d0 ) THEN
+        !CALL DGESV( NH+1, NRHS, BINV, LDA, IPIV, ALPHA, LDB, INFO )
+        CALL ZGESV( NH+1, NRHS, BINV, LDA, IPIV, ALPHA, LDB, INFO )
+     ELSE
+             INFO = -1
+     ENDIF
+     
+     ! Saving the Lagrange multilyer for the ouput
+     LAMDA = sqrt(ALPHA(NH+1)*CONJG(ALPHA(NH+1)))
+     
+     ! Calculating the new density matrix:
+     PNEW = 0.0d0
+     DO I=1,NH
+         PNEW = PNEW + Pprevious(I,:,:)*ALPHA(I)
+     ENDDO
+     DEALLOCATE(DP,B,ALPHA,BINV,C,IPIV)
+
+END SUBROUTINE DIISc

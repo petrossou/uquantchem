@@ -1,0 +1,168 @@
+##############################################################################
+#			UQUANTCHEM V.35  (V.35.22)                   	     #
+##############################################################################
+
+##########################################################
+## Bugg-fixes relative V.35.21 and all previous versions
+###########################################################
+
+(1) The potential energy emanating from external E-field and the atomic nuclea
+was calculated before the electric field was updated. This means that the
+total energy was one time-step "off beat" with the forces when dealing with 
+time-depndent electrical fields
+
+##########################################################
+## Bugg-fixes relative V.35.20 and all previous versions
+###########################################################
+
+(1) The dipole-tensor was not uppdated for relaxation calculations with 
+an external electric field ('ADEF' = .T.) this has now been fixed by 
+adding the line 
+
+CALL dipoletensor(BAS,DPTENSORT)
+
+in the source files relax.f90 and relaxf.f90.
+
+The above files has also been "cleaned up" so that redundant code has 
+been removed.
+
+##########################################################
+## Bugg-fixes relative V.35.19 and all previous versions
+###########################################################
+
+
+(1) The potential energy emanating from external E-field and the atomic nuclea
+was missing in all relaxation calculations with 'ADEF' = .T. at each line-search
+minimum in relax.f90 and relaxf.90
+
+##########################################################
+# Bugg-fixes relative V.35.18 and all previous versions
+##########################################################
+
+(1) When doing relaxation with a constant electric field ( 'ADEF' = .T. )
+the dipole-tensor was missing from all calculations of the total-energy
+in the relax.f90 and relaxf.f90. The following has been added to 
+the above mentioned source files just after the line H0 = T + V.
+
+IF ( ADEF ) THEN
+            IF ( EDIR .EQ. 1 ) DPTENSOR = DPTENSORT(2,:,:)
+            IF ( EDIR .EQ. 2 ) DPTENSOR = DPTENSORT(3,:,:)
+            IF ( EDIR .EQ. 3 ) DPTENSOR = DPTENSORT(1,:,:)
+            H0 = H0 + DPTENSOR*EFIELDMAX
+ENDIF
+
+(2) The potential energy emanating from external E-field and the atomic nuclea
+was missing in all relaxation calculations with 'ADEF' = .T.  
+This has now been rectyfied by changing relax.f90 and relaxf.f90 and also
+uquantchem.f90 accordingly.
+
+
+############################################################
+#BUGG-FIXES Relative to V.35.13,V.35.14,V.35.15 and V.35.16:
+############################################################
+(1) The sign of the dipole-term in the Hamiltonian/Fockian was wrong.
+Consequently all calculations with 'ADEF' = .T. has been wrong. This
+bugg made the forces and total-energy inconsistent. Thus the total-energy has not
+been conserved during MD-calculations with static electric fields and no damping.
+Also all relaxation calculations with 'ADEF' = .T. have also been wrong due to 
+the inconsistency between energy and forces.
+
+The following changes has been made in the following source files: 
+(Line numbers in reference to MPI-version)
+
+line 881 in uquentchem.f90:  H0 = H0 - EFIELDMAX*DIPOLET  -->  H0 = H0 + EFIELDMAX*DIPOLET 
+line 462 in moleculardynamics.f90: H0 = H0 - DPTENSOR ---> H0 = H0 + DPTENSOR
+
+Corresponding sign changes has been made in the TDFT.f90 and TDFTCORR.f90 source files.
+The wrong sign in these files has in principle not resulted in any bug, appart from 
+the user having utilized the oposite filed direction as set in the INPUTFILE.
+##################################################################
+# Added fetures Relative to V.35.13,V.35.14,V.35.15 and V.35.16:
+##################################################################
+
+(1) The potential energy contribution from the interaction with the external electric field with the 
+nuclear charges has been added in the case of an adiabatic electric field MD-calculation
+('ADEF' = .T.). This enables to check weather or not the total energy is conserved during 
+an adiabatic electric field MD-calculation with a constant external electric field.
+
+##########################################################################################
+
+New implementations relative to V.35.13: 
+(1) The possibility to run TD-DFT/TD-HF 
+calculations with circular polarized light by setting 'EPROFILE' to 'CIRC'.
+
+(2) The possibility to use phenomenological dynamic friction forces when 
+running a molecular-dynamics calculation. The frictional forces on the atoms
+will then be proportional to their respective velocities. The proportionality
+constant 'DAMPING' is set in the inpufile. (default = 0.0 )
+
+The V.35 version is a version in which the resoulution of the identity
+(RI-technique), also known as coulumb fitting, has been implemented. Here the 
+calculation of the electron-electron integrals (ij|kl) are approximated by 
+the RI-approximation.  However, in  the MPI-version of V.35  all the integrals 
+of significant amplitude will still be pre-calculated and stored in memory. 
+Thus, the memory problems of previous MPI-versions will remain until V.36. 
+
+In the openmp version however, when using the RI-approximation, it is possible 
+to calculate the (ij|kl) on the fly, i.e in direct conection with rhe calculation 
+of the exchange, K_ij, and coulumb, J_ij, integrals, saving a lot of memory.
+
+In order to employ the RI-approximation set the logical flag 'RIAPPROX' to .TRUE.
+in the INPUTFILE. Also make sure to copy either '/V.35/BASIS/Weigend-Coulomb-Fitting.dat' 
+or '/V.35/BASIS/Ahlrichs-Coulumb-fitting.dat' to the file 'BASISFILEAUX' located in the 
+directory where you plan to run uquantchem.
+
+Observe the the auxilliary basis in 'Weigend-Coulomb-Fitting.dat' is only optimized
+relative to the basis sets having the following prefix 'Def2-'. However, this 
+auxilliary basis seem to work well also with the standard basis-sets such as
+STO-3G, 6-31G**, 6-311G**, etc, etc... The other AUX-basis 'Ahlrichs-Coulumb-fitting.dat'
+have not been tested.
+
+The contraction/calculation of exchange and columb -integrals together with the
+numerical integral quadrature used for the DFT calculations have been parallelized
+in the openmp-version.
+
+It is now also possible calculate a starting guess to molecular density matrices by 
+first performing a series of atomic calculations. Only requirement is that one uses 
+the same basis for both generating the starting guess as for the molecular 
+calculation. The atomic density matrices utilized to create the molecular starting 
+guess density matrix are stored in the file 'DENSMATSTARTGUESS.dat'
+
+Furthermore it is now also possible use a diagonal density matrix as a starting-guess 
+by setting 'DIAGDG' to .TRUE. (This is overridden if the file 'DENSMATSTARTGUESS.dat'
+is present in the run-dir and the number of atoms are > 1 ).
+
+Finally it is now also possible to set an arbitrary elecric field polarization relative 
+to the molecule. This is done by setting the 3-dim vector 'FIELDDIR'. Observe that 
+after a relaxation calculation or a molecular dynamics calculation the OUT-put 
+atomic positions will be expressed in coordinates which are such that the 
+z-direction is paralell to 'FIELDDIR' !!. Thus if one wants to continue the 
+calculation with the new uppdated atomic positions with the same electric field 
+direction relative to the molecule, one needs to set 'FIELDDIR' 
+to '0.0d0 0.0d0 1.0d0' 
+
+##############################
+BUGG-FIXES Relative to V.35.9:
+##############################
+
+A bugg in TDFTCORR.f90 and TDFT.f90 made the TDFTCORR.f90 routine
+return the uncorrected Fockians to TDFT.f90 after the correction scf was finished. 
+This has now been fixed.
+
+################################
+# Minor fix relative to V.35.11
+###############################
+
+Fixed the "runtests.pl" utility that in the case of TD-DFT (TEST) gave a false failure message.
+
+Removed the "STOP"'s not related to faulty user inputs from the uquantchem.f90, relaxf.f90 and relax.f90
+(OPENMP_VERSION), since these STOPs gave the false error message:
+"Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL"
+when using the latest gfortran compiler. Here "GOTO 4000" statements were introduced in uquantchem.f90, where the
+tag "4000" is in the end of uquantchem.f90. Resulting now that computational time is printed in all types of calculations.
+
+Fixed a bug in uquantchem.f90 that made the finite difference calculation of forces using RHF impossible.
+
+######################### petros.souvatzis@gmail.com ##########################
+#                      	 Mon Nov 28 09:16:18 CET 2016
+###############################################################################

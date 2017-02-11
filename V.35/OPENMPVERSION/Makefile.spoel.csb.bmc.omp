@@ -1,0 +1,74 @@
+#################################################################################
+# This makefile is for building the stand alone openmp version of uquantchem    #
+#         using the lapack-3.4.0 library that comes with the package.           #
+#                                                                               #
+#               Petros Souvatzis: petros.souvatzis@fysik.uu.se                  #
+#                       Tue Apr 24 13:39:21 CEST 2012				#
+#################################################################################
+
+FC = gfortran
+
+FFLAGS =  -fopenmp -ffree-form -ffree-line-length-none -frecursive
+
+F77FLAGS = -fopenmp -ffixed-form -frecursive
+
+LAPACKPATH = /home/petros/V.32/lapack-3.4.0
+
+BLASPATH = /home/petros/V.32/BLAS
+
+LIB = -L$(LAPACKPATH) -llapack -L$(BLASPATH) -lblas
+
+OFLAG  = -O3 -ftree-vectorize 
+
+SOURCE = datatypemodule.o exchcorrmodule.o functionsmodule.o random.o Afunc.o RHF.o RHFz.o Fnurec.o Fnu.o CISD.o getKv.o getK.o getJv.o getJ.o gammaf.o fj.o fac.o  \
+	gto.o gtop.o gtopp.o gtoppp.o eeints.o diaghHF.o diagh.o dfac.o checkinputfile.o chargedenssave.o exciteornot.o \
+	hforbitalsave.o binomfac.o basfunkval.o URHF.o URHFz.o primeeintegral.o potential.o overlap.o oneint.o normalize.o ROOTWEIGHT5.o \
+	leastsq.o makedens.o kinetic.o ijkl.o homolumosave.o gettotalbasis.o rysquad.o rho.o readin.o ROOTWEIGHT4.o \
+	interpol.o gradbasfunkval.o laplacebasfunkval.o hforbitalval.o gradhforbitalval.o laplacehforbitalval.o det.o \
+	stoexponent.o slaterdet.o laplaceslaterdet.o gradslaterdet.o jastrowup.o jastrowdown.o jastrowud.o jastrow.o \
+	DIIS.o preparedifusion.o gradjastrow.o laplacejastrow.o guideforce.o laplacetrialfnk.o trialfnk.o EL.o dqmc.o \
+	findclosestatom.o ROOTWEIGHTMAX3.o readbasis.o primpotential.o primoverlap.o primkinetic.o MP2.o uquantchem.o \
+	gradprimoverlap.o gradprimkinetic.o gradprimpotential.o gradprimeeintegral.o forces.o forcesz.o dAfunc.o relax.o linesearchmin.o \
+	massa.o moleculardynamics.o invert.o vxc.o vxcalt.o dvxc.o ngbasfunkval.o nggradbasfunkval.o nglaplacebasfunkval.o \
+	getvxcr.o atomicradii.o lebedev1.o lebedev2.o lebedev3.o lebedev4.o lebedev5.o chebgauss.o sofmu.o pvoronoi.o getvxc.o excdens.o excdr.o exc.o DFT.o DFTz.o quadcheck.o TRACE.o \
+	hessianbasfunk.o hessianrho.o dftforcedens.o getxcforce.o pnonorm.o tmu.o gradpvoronoi.o relaxf.o mulliken.o makedensT.o hessianrhonip.o dftforcedensnip.o getxcforcenip.o \
+	dftforcedensnipz.o getxcforcenipz.o DFTCHI.o arbitaryorbitalsave.o orbitalmomentumtensor.o makeltesor.o dipoletensor.o PRINTENERGYEIGENVAL.o PRINTDIPOLETENSOR.o \
+	diaghc.o diaghcc.o makedensc.o getKvc.o getJvc.o DIISc.o TDFTCORR.o TDFT.o makedensTc.o inhomefieldoverlap.o dipoletensorinhom.o fouriertransf.o \
+	graddipoletensor.o graddipoletensorinhom.o gradpriminhomefieldoverlap.o gethole.o exciteddenssave.o  exitedarbitaryorbitalsave.o numforces.o \
+	readbasisaux.o calcWRI.o calcVRI.o getKvforceRI.o getJvforceRI.o eeintsRI.o Wdensmatstartguess.o Rdensmatstartguess.o vxc2.o
+
+all: lapack_install blas_install uquantchem
+
+lapack_install:
+	( cd ../lapack-3.4.0; $(MAKE) )
+
+blas_install:
+	( cd ../BLAS; $(MAKE) )
+
+
+uquantchem:  $(SOURCE) 
+	$(FC) $(FFLAGS) $(SOURCE) $(LIB) -o uquantchem.omp
+
+clean: 
+	-/bin/rm *.o *~ *.mod uquantchem.omp
+
+%.o: %.f
+	$(FC) $(LIB) $(F77FLAGS) $(OFLAG) -c $<
+
+%.o: %.f90
+	$(FC) $(LIB) $(FFLAGS) $(OFLAG) -c $<
+
+lebedev1.o: lebedev1.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev1.f90
+
+lebedev2.o: lebedev2.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev2.f90
+
+lebedev3.o: lebedev3.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev3.f90
+
+lebedev4.o: lebedev4.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev4.f90
+
+lebedev5.o: lebedev5.f90
+	$(FC) $(LIB) $(FFLAGS) -O0 -c lebedev5.f90
