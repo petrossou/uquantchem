@@ -1,7 +1,12 @@
 ##############################################################################
 #			UQUANTCHEM V.35  (V.35.22)                   	     #
 ##############################################################################
-
+# This is the git-hub version of the code which is identical to the one you 
+# can find at the code homepage: http://www.uquantchem.com/uquantchem.html 
+# In the future I will try and maintain only the git-hub version. It is a matter 
+# of getting comfortable with using git. It is a matter of paranoia, i.e not 
+# alltogether rational.
+# -------------------------------------------------------------------------------
 ##########################################################
 ## Bugg-fixes relative V.35.21 and all previous versions
 ###########################################################
