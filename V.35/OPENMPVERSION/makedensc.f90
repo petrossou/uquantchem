@@ -1,0 +1,13 @@
+SUBROUTINE makedensc(COEFF,NB,P)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: NB
+      COMPLEX*16, INTENT(IN) :: COEFF(NB,NB)
+      COMPLEX*16, INTENT(OUT) :: P(NB,NB)
+      
+      P = (0.0d0,0.0d0)
+      P = MATMUL(COEFF,TRANSPOSE(CONJG(COEFF)))
+
+END SUBROUTINE makedensc
+           
+
+
