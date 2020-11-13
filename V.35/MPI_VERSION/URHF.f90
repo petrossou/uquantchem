@@ -311,6 +311,9 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
              IF ( FTOT .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A7,A6,A20,E27.20,A3)'),'       ',' URHF ',' free-energy: F = ',FTOT,' au'
              IF ( FTOT .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A7,A6,A20,E30.20,A3)'),'       ',' URHF ',' free-energy: F = ',FTOT,' au'
              print*,' '
+             IF ( mu .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A33,E27.20,A3)'),'           Fermi Energy:   E_F = ',mu,' au'
+             IF ( mu .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A33,E30.20,A3)'),'           Fermi Energy:   E_F = ',mu,' au'
+             print*,' '
            ENDIF
      ELSE
            IF ( id .EQ. 0 ) THEN

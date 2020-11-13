@@ -335,11 +335,17 @@ SUBROUTINE DFT(CORRLEVEL,NATOMS,ATOMS,NTOTALQUAD,Q1,Q2,Q3,BAS,S,gradS,H0,Intsv,N
                         IF ( ETOT .LT. -1.0E03) WRITE(*,'(A6,A3,A20,E30.20,A3)'),'      ',CORRLEVEL,' energy:        E = ',ETOT,' au'
                         IF ( FTOT .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A6,A3,A20,E27.20,A3)'),'      ',CORRLEVEL,' free-energy:   F = ',FTOT,' au'
                         IF ( FTOT .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A6,A3,A20,E30.20,A3)'),'      ',CORRLEVEL,' free-energy:   F = ',FTOT,' au'
+                        print*,' '
+                        IF ( mu .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A29,E27.20,A3)'),'       Fermi Energy:   E_F = ',mu,' au'
+                        IF ( mu .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A29,E30.20,A3)'),'       Fermi Energy:   E_F = ',mu,' au'
                 ELSE
                         IF ( ETOT .GT. -1.0E03) WRITE(*,'(A6,A5,A20,E27.20,A3)'),'      ',CORRLEVEL,' energy:        E = ',ETOT,' au'
                         IF ( ETOT .LT. -1.0E03) WRITE(*,'(A6,A5,A20,E30.20,A3)'),'      ',CORRLEVEL,' energy:        E = ',ETOT,' au'
                         IF ( FTOT .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A6,A5,A20,E27.20,A3)'),'      ',CORRLEVEL,' free-energy:   F = ',FTOT,' au'
                         IF ( FTOT .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A6,A5,A20,E30.20,A3)'),'      ',CORRLEVEL,' free-energy:   F = ',FTOT,' au'
+                        print*,' '
+                        IF ( mu .GT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A29,E27.20,A3)'),'       Fermi Energy:   E_F = ',mu,' au'
+                        IF ( mu .LT. -1.0E03 .AND. ETEMP .GT. 0.0d0 ) WRITE(*,'(A29,E30.20,A3)'),'       Fermi Energy:   E_F = ',mu,' au'
                 ENDIF
                 print*,' '
                 WRITE(*,'(A75,F9.6)')'     The exact number of electrons calculated from the trace of P*S, Ne =  ',SUM(PT*S)
