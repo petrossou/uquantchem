@@ -19,6 +19,9 @@ SUBROUTINE doubleoverlap(NATOMS,FNATOMS,BAS,Intsv,IND1,IND2,IND3,IND4,NDIAG,Ista
       DOUBLE PRECISION :: A(3),B(3),C(3),D(3),al1,al2,al3,al4,co1,co2,co3,co4
       INTEGER, EXTERNAL :: ijkl
       LOGICAL :: DOSUMOVERPRIMS
+      DOUBLE PRECISION, PARAMETER :: pi = 3.1415926535897932384626433832795028841970d0
+      DOUBLE PRECISION, PARAMETER :: lightspeed = 137.035999084
+      
       ! First we calculate the mapping from one index, g, onto four
       ! ndexes (I,J,K,L), i.e IMAP:g ----->(I,J,K,L) 
      
@@ -94,7 +97,7 @@ DO GG=1,1
                                                                 !------------------------------------------------------------
                                                                 IF ( KL .NE. IJ ) THEN
                                                                     Intsv(G) = Intsv(G) + TERM*doubleprimoverlap(L1,M1,N1,A,al1,L2,M2,N2,B,al2, &
-                                                                               L3,M3,N3,C,al3,L4,M4,N4,D,al4)
+                                                                               & L3,M3,N3,C,al3,L4,M4,N4,D,al4)
                                                                 ENDIF
                                                         ENDDO
                                                 ENDDO
