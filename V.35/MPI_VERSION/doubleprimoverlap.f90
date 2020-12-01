@@ -5,7 +5,7 @@ FUNCTION doubleprimoverlap(L1,M1,N1,A,alpha1,L2,M2,N2,B,alpha2,L3,M3,N3,C,alpha3
         IMPLICIT NONE
         INTEGER :: L1,M1,N1,L2,M2,N2,L3,M3,N3,L4,M4,N4
         DOUBLE PRECISION :: doubleprimoverlap
-        DOUBLE PRECISION :: alpha1,alpha2,alpha3,alpha4,A(3),B(3),C(3),D(3),PA(3),PB(3),P(3),QC(3),QD(3),Q(3),RP(3),RQ(3),CC
+        DOUBLE PRECISION :: alpha1,alpha2,alpha3,alpha4,A(3),B(3),C(3),D(3),R(3),PA(3),PB(3),P(3),QC(3),QD(3),Q(3),RP(3),RQ(3),CC
         DOUBLE PRECISION :: Sx,Sy,Sz,gama,delta,xi
         INTEGER :: I,J,K
         DOUBLE PRECISION, EXTERNAL :: fj,dfac

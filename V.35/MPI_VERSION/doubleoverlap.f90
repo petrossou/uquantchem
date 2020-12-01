@@ -1,4 +1,4 @@
-SUBROUTINE doubleoverlap(NATOMS,FNATOMS,BAS,Intsv,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,numprocessors,id,NONZERO)
+SUBROUTINE doubleoverlap(NATOMS,BAS,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,NONZERO)
       ! This subroutine calculates the 
       ! double overlap tesor to be used to calculate the relativistic Dirac term/correction emanating from the Hartree electron
       ! repulsion potential.
@@ -8,10 +8,10 @@ SUBROUTINE doubleoverlap(NATOMS,FNATOMS,BAS,Intsv,IND1,IND2,IND3,IND4,NDIAG,Ista
       INCLUDE "mpif.h"
       DOUBLE PRECISION, EXTERNAL :: doubleprimoverlap
       TYPE(BASIS), INTENT(IN) :: BAS
-      INTEGER, INTENT(IN) :: id,numprocessors,NATOMS,FNATOMS
-      INTEGER*8, INTENT(IN) :: Istart,Iend,Istartg,Iendg,NONZERO,NDIAG
+      INTEGER, INTENT(IN) :: id,numprocessors,NATOMS
+      INTEGER*8, INTENT(IN) :: Istart,Iend,NONZERO
       INTEGER, INTENT(INOUT) :: IND1(Istart:Iend),IND2(Istart:Iend),IND3(Istart:Iend),IND4(Istart:Iend)
-      DOUBLE PRECISION, INTENT(INOUT) :: Intsv(Istart:Iend),gradIntsv(FNATOMS,3,Istartg:Iendg)
+      DOUBLE PRECISION, INTENT(INOUT) :: Intsv(Istart:Iend)
       INTEGER*8 :: IMAP(Istart:Iend,6),N0p(numprocessors)
       INTEGER*8 :: I,J,K,L,M,N,NN,MM,P,Q,G,IJ,KL,L1,M1,N1,L2,M2,N2,L3,M3,N3,L4,M4,N4,NSTART,GG,STRL,KK,PPP,II
       INTEGER*8 :: rcounts(numprocessors),displs(numprocessors),ierr,scount,SI,SIC(numprocessors)

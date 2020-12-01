@@ -1,19 +1,20 @@
 SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,FIXNSCF, &
-              & numprocessors,id,POUT,SCRATCH,ZEROSCF,ETEMP,ENTROPY)
+              & numprocessors,id,POUT,SCRATCH,ZEROSCF,ETEMP,ENTROPY,SCALARRELC,IntsDirac,URHFTORHF)
       ! This subroutine calculates the self consistent UN-Restricted
       ! Hartree-Fock solution
       IMPLICIT NONE
       INCLUDE "mpif.h"
-      LOGICAL, INTENT(IN) :: POUT,SCRATCH,ZEROSCF
+      LOGICAL, INTENT(IN) :: POUT,SCRATCH,ZEROSCF,SCALARRELC,URHFTORHF
       INTEGER, INTENT(IN) :: NB,Ne,numprocessors,id,FIXNSCF
       INTEGER*8, INTENT(IN) :: Istart,Iend,NRED
       INTEGER, INTENT(INOUT) :: DIISORD,DIISSTART
       INTEGER, INTENT(OUT) :: NSCF
       INTEGER, INTENT(IN) :: IND1(Istart:Iend),IND2(Istart:Iend),IND3(Istart:Iend),IND4(Istart:Iend)
-      DOUBLE PRECISION, INTENT(IN) :: S(NB,NB),H0(NB,NB),Intsv(Istart:Iend),Tol,nucE,MIX,ETEMP
+      DOUBLE PRECISION, INTENT(IN) :: S(NB,NB),H0(NB,NB),Intsv(Istart:Iend),Tol,nucE,MIX,ETEMP, IntsDirac(Istart:Iend)
       DOUBLE PRECISION, INTENT(OUT) :: EHFeigenup(NB),EHFeigendown(NB),ETOT,ENTROPY
       DOUBLE PRECISION, INTENT(INOUT) :: Cup(NB,NB),Cdown(NB,NB),Pup(NB,NB),Pdown(NB,NB)
       DOUBLE PRECISION :: PT(NB,NB),Jup(NB,NB),Jdown(NB,NB),Kup(NB,NB),Kdown(NB,NB),C3(NB,NB),C4(NB,NB),mu
+      DOUBLE PRECISION :: JDup(NB,NB),JDdown(NB,NB)
       DOUBLE PRECISION :: Fup(NB,NB),Fdown(NB,NB),G(NB,NB),C1(NB,NB),C2(NB,NB),DE,EOLD,DELTAP,PTnomix(NB,NB),PTold(NB,NB)
       DOUBLE PRECISION ::  Pupold(NB,NB),Pdownold(NB,NB),LAMDAu,LAMDAd,Pupt(NB,NB),Pdownt(NB,NB)
       DOUBLE PRECISION :: Pups(50,NB,NB),Pdowns(50,NB,NB),MIXING,TOLDNe,FTOT,FOLD
@@ -21,9 +22,11 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
       INTEGER :: III,II,I,L,M,N,Neup,Nedown,ierr,INFO1,INFO2,INFO
       INTEGER :: MAXITER
       INTEGER, EXTERNAL :: ijkl
-      LOGICAL :: STARTPRINTDIISIFO
-
+      LOGICAL :: STARTPRINTDIISIFO, CONTINUEWITHSREL
+      DOUBLE PRECISION, PARAMETER :: pi = 3.1415926535897932384626433832795028841970d0      
+      DOUBLE PRECISION, PARAMETER :: lightspeed = 137.035999084
       MIXING = MIX
+      CONTINUEWITHSREL = .FALSE.
       IF ( FIXNSCF .GT. 0 ) THEN
               MAXITER = FIXNSCF-1
       ELSE
@@ -75,6 +78,10 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
       !=======================================================
       IF ( ZEROSCF ) THEN
                 PT = Pup + Pdown
+                IF (URHFTORHF) THEN
+                        Pup = 0.5*PT
+                        Pdown = 0.5*PT
+                ENDIF
                 CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
                 CALL getJv(Pup,NB,NRED,Istart,Iend,Intsv,IND1,IND2,IND3,IND4,numprocessors,id,Jup)
                 CALL getJv(Pdown,NB,NRED,Istart,Iend,Intsv,IND1,IND2,IND3,IND4,numprocessors,id,Jdown)
@@ -83,6 +90,21 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
                 CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
                 Fup   = H0 + Jdown - Kup   + Jup
                 Fdown = H0 + Jdown - Kdown + Jup
+
+                !IF ( SCALARRELC ) THEN
+                !        ! In the case of scalar relatevistic corrections. The nuclear attraction Dirac correction 
+                !        ! term is allready included in H0 together with the mass-correction term. Here we add the 
+                !        ! Dirac correction term emanating from the electro-electron (Hartree) repulsion term.
+                !        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                !        CALL getJv(Pup,NB,NRED,Istart,Iend,IntsDirac,IND1,IND2,IND3,IND4,numprocessors,id,JDup)
+                !        CALL getJv(Pdown,NB,NRED,Istart,Iend,IntsDirac,IND1,IND2,IND3,IND4,numprocessors,id,JDdown)
+                !        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                !
+                !        Fup   = Fup + JDup*(pi/(2.0*(lightspeed**2)))
+                !        Fdown = Fdown + JDown*(pi/(2.0*(lightspeed**2)))
+                !
+                !ENDIF
+
                 CALL diaghHF( Fup,S,NB,EHFeigenup,C1,INFO1)
                 CALL diaghHF( Fdown,S,NB,EHFeigendown,C2,INFO2)
                 !ETOT = 0.50d0*(SUM(H0*PT) + SUM(Fup*Pup) + SUM(Fdown*Pdown) ) + nucE
@@ -145,14 +167,22 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
                 DELTAP = sqrt(DOT_PRODUCT(reshape(PT-PTold,(/NB**2/)),reshape(PT-PTold,(/NB**2/)) ))
                 
                 ! Linear mixing:
-                IF ( I .GT. 0 ) THEN
-                   Pup = Pup*(1.0d0-MIXING) + Pupold*MIXING
-                   Pdown = Pdown*(1.0d0-MIXING) + Pdownold*MIXING
+                IF ( I .GT. 0 .AND. .not. STARTPRINTDIISIFO ) THEN
+                        Pup = Pup*(1.0d0-MIXING) + Pupold*MIXING
+                        Pdown = Pdown*(1.0d0-MIXING) + Pdownold*MIXING
                 ELSE
-                   Pup = Pup
-                   Pdown = Pdown
+                        Pup = Pup
+                        Pdown = Pdown
                 ENDIF
                 
+                IF (URHFTORHF) THEN
+                        IF ( I .GT. 0 .AND. .not. STARTPRINTDIISIFO ) THEN
+                                PT = PT*(1.0d0-MIXING) + PTold*MIXING
+                        ENDIF
+                        Pup = 0.5d0*PT
+                        Pdown = 0.5d0*PT
+                ENDIF
+               
                 Pupold = Pup 
                 Pdownold = Pdown 
  
@@ -191,8 +221,13 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
 
                     IF ( (INFO1 .EQ. 0 .AND. INFO2 .EQ. 0 .AND. LAMDAu+LAMDAd .LT. 1.0d0) .OR. (INFO1 .EQ. 0 .AND. INFO2 .EQ. 0 .AND. I .GT. DIISSTART )  ) THEN
                          IF ( I .GE. DIISSTART ) THEN
-                                Pup = Pupt
-                                Pdown = Pdownt
+                                IF ( .not. URHFTORHF ) THEN
+                                        Pup = Pupt*(Neup/SUM(S*Pupt))
+                                        Pdown = Pdownt*(Nedown/SUM(S*Pdownt))
+                                ELSE
+                                        Pup = Pupt*(0.50d0*Ne/SUM(S*Pupt))
+                                        Pdown = Pdownt*(0.50d0*Ne/SUM(S*Pdownt))
+                                ENDIF
                                 STARTPRINTDIISIFO = .TRUE.
                                 MIXING = 0.0d0
                          ENDIF
@@ -227,6 +262,26 @@ SUBROUTINE URHF(S,H0,Intsv,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,E
                 Fup   = H0 + Jdown - Kup   + Jup
                 Fdown = H0 + Jdown - Kdown + Jup
 
+                !IF ( SCALARRELC ) THEN
+                !        ! In the case of scalar relatevistic corrections. The nuclear attraction Dirac correction 
+                !        ! term is allready included in H0 together with the mass-correction term. Here we add the 
+                !        ! Dirac correction term emanating from the electro-electron (Hartree) repulsion term.
+                !        ! This screened Dirac term is unstable thus it is only calculated at the first step. 
+                !        ! This also demand that the Non-rel and convered Pup and Pdown are provided at first iteration.
+                !        ! This term can only be considered as a Perturbative term and not part of the SCF-cycle.
+                !        IF ( I .EQ. 0 ) THEN
+                !                CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                !                CALL getJv(Pup,NB,NRED,Istart,Iend,IntsDirac,IND1,IND2,IND3,IND4,numprocessors,id,JDup)
+                !                CALL getJv(Pdown,NB,NRED,Istart,Iend,IntsDirac,IND1,IND2,IND3,IND4,numprocessors,id,JDdown)
+                !                CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+                !        ENDIF
+                !
+                !        Fup   = Fup + JDup*(pi/(2.0*(lightspeed**2)))
+                !        Fdown = Fdown + JDdown*(pi/(2.0*(lightspeed**2)))
+                !
+                !        CONTINUEWITHSREL = .TRUE.
+                !ENDIF
+                
                 ! Here we calculate the error vector/matrix according to 
                 ! P. Pulay, J. Comp. Chem. 3, 556 (1982) (Eqn 4)
                 ! to be used in the DIIS algorithm:

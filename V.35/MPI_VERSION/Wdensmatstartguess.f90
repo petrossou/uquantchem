@@ -10,11 +10,7 @@ SUBROUTINE  Wdensmatstartguess(ATOMICNUMBER,NB,Pup,Pdown)
         inquire(file='DENSMATSTARTGUESS.dat',exist=finns)
         
         IF ( finns ) THEN
-                OPEN(25,FILE='DENSMATSTARTGUESS.dat',STATUS='OLD',ACTION='READWRITE')
-                DO WHILE (.TRUE. ) 
-                        READ(25,FMT=1,end=1000)LINE
-                ENDDO
-        1000    CONTINUE
+                OPEN(25,FILE='DENSMATSTARTGUESS_LATEST.dat',ACTION='READWRITE')
                 WRITE(25,'(I4,I6)')ATOMICNUMBER,NB
                 DO I=1,NB
                         DO J=I,NB

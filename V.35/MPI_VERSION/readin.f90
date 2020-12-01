@@ -2,7 +2,7 @@ SUBROUTINE readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBER,SPATIALPOSITION,Ne,Tol,WR
 & SAMPLERATE,NREPLICAS,TIMESTEP,TEND,TSTART,BETA,BJASTROW,CJASTROW,NPERSIST,REDISTRIBUTIONFREQ,NOREDIST,NRECALC,CUTTOFFFACTOR,MIX,DIISORD,DIISSTART,CUSPCORR,rc,CORRALCUSP, &
 & NVMC,HFORBWRITE,IOSA,CFORCE,RELAXN,NSTEPS,DR,FTol,NLSPOINTS,PORDER,WRITEONFLY,MOVIE,MOLDYN,TEMPERATURE,ZEROSCF,XLBOMD,kappa,alpha,DORDER,PULAY,FIXNSCF,NLEBEDEV,NCHEBGAUSS,&
 & EETOL,RELALGO,SOFTSTART,HUCKEL,ZEROSCFTYPE,ETEMP,IORBNR,AORBS,DIISORDEX,DOTDFT,OMEGA,EDIR,NEPERIOD,EPROFILE,EFIELDMAX,ADEF,OPTH,MIXEX,DOABSSPECTRUM, &
-& DIFFDENS,NSCCORR,MIXTDDFT,SCERR,RIAPPROX,LIMPRECALC,DIAGDG,FIELDDIR,FIELDREAD,DAMPING)
+& DIFFDENS,NSCCORR,MIXTDDFT,SCERR,RIAPPROX,LIMPRECALC,DIAGDG,FIELDDIR,FIELDREAD,DAMPING,SCALARRELC,URHFTORHF)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: NATOMS,NLINES
       CHARACTER(LEN=20), INTENT(OUT) :: CORRLEVEL,EPROFILE
@@ -11,7 +11,7 @@ SUBROUTINE readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBER,SPATIALPOSITION,Ne,Tol,WR
       DOUBLE PRECISION,INTENT(OUT) :: SPATIALPOSITION(NATOMS,3),Tol,LIMITS(3),ENEXCM,TIMESTEP,TEND,TSTART,BETA,BJASTROW,CJASTROW,CUTTOFFFACTOR,MIX,rc,DR,FTol,TEMPERATURE,kappa,alpha,EETOL,ETEMP
       DOUBLE PRECISION,INTENT(OUT) :: OMEGA,EFIELDMAX,MIXEX,MIXTDDFT,SCERR,FIELDDIR(3),DAMPING
       LOGICAL, INTENT(OUT) :: WRITECICOEF,WRITEDENS,WHOMOLUMO,LEXCSP,SPINCONSERVE,RESTRICT,APPROXEE,NOREDIST,CUSPCORR,CORRALCUSP,HFORBWRITE,CFORCE,RELAXN,WRITEONFLY,MOVIE,MOLDYN,ZEROSCF,XLBOMD
-      LOGICAL, INTENT(OUT) :: SOFTSTART,HUCKEL,DOTDFT,ADEF,OPTH,DOABSSPECTRUM,DIFFDENS,RIAPPROX,DIAGDG,FIELDREAD
+      LOGICAL, INTENT(OUT) :: SOFTSTART,HUCKEL,DOTDFT,ADEF,OPTH,DOABSSPECTRUM,DIFFDENS,RIAPPROX,DIAGDG,FIELDREAD,SCALARRELC,URHFTORHF
       INTEGER :: I,J,TOTALNLINES
       LOGICAL :: finns,LINEHASBEANREAD,ABSSPECTSET
       CHARACTER(LEN=20), ALLOCATABLE :: VARNAME(:)
@@ -36,6 +36,13 @@ SUBROUTINE readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBER,SPATIALPOSITION,Ne,Tol,WR
 
 
         ! Here we put some default values:
+        URHFTORHF = .FALSE. ! If true the density matrices of an open shell calculation (URHF) Pu and Pd are transformed to be equal
+                            ! by the following transformation Pu* = 0.5*(Pu + Pd) , Pd* = Pu*. This is for the moment only
+                            ! implemented for URHF calculations to make the convergence of open shell systems more stable. TODO:
+                            ! Extend this to DFT calculations.
+        SCALARRELC = .FALSE.     ! If true the total energy Hartree-Fock and DFT calculations are done with scalar relatevistic
+                                ! correctons, i.e Darwin correction to the nuclear and Hartree potentials including the p**4 mass
+                                ! correction term. TODO: Calculate the nuclear forces with this correction as well.
         
         DAMPING = 0.0d0                         ! When doing molecular dynamics calculations one can introduce (fenomenological) dynamical friction,
                                                 ! where the friction forces are proportonal to the velocities of the atomic nuclea. The proportionality 
@@ -537,6 +544,18 @@ SUBROUTINE readin(CORRLEVEL,NATOMS,NLINES,ATOMICNUMBER,SPATIALPOSITION,Ne,Tol,WR
                 ENDIF
                 IF ( VARNAME(I) .EQ. 'FIELDDIR') THEN
                         READ(10,*)DUMMY,FIELDDIR
+                        LINEHASBEANREAD = .TRUE.
+                        FIELDREAD = .TRUE.
+                        EDIR = 2
+                ENDIF
+                IF ( VARNAME(I) .EQ. 'SCALARRELC') THEN
+                        READ(10,*)DUMMY,SCALARRELC
+                        LINEHASBEANREAD = .TRUE.
+                        FIELDREAD = .TRUE.
+                        EDIR = 2
+                ENDIF
+                IF ( VARNAME(I) .EQ. 'URHFTORHF') THEN
+                        READ(10,*)DUMMY,URHFTORHF
                         LINEHASBEANREAD = .TRUE.
                         FIELDREAD = .TRUE.
                         EDIR = 2

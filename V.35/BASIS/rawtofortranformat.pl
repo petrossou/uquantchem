@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use POSIX;
-$header = "Ahlrichs_coulumb_fitt";
+$header = "ANO-DK3";
 
 $FILENAMEF = $header.".dat";
 $FILENAMERAW = $header.".raw";

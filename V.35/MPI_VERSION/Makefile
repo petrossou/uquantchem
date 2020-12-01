@@ -10,17 +10,17 @@
 
 FC = mpif90
 
-FFLAGS = -O3 -ffree-form -ffree-line-length-none
+FFLAGS = -O3 -ffree-form -ffree-line-length-none -fallow-argument-mismatch -Wall
 
-F77FLAGS = -O3 -ffixed-form
+F77FLAGS = -O3 -ffixed-form -fallow-argument-mismatch -Wall
 
-LAPACKPATH = /Users/petros/lapack-3.4.0
+#LAPACKPATH = /Users/petros/lapack-3.4.0
 
-BLASPATH = /Users/petros/BLAS
+#BLASPATH = /Users/petros/BLAS
 
-SCALAPACKPATH = /Users/petros/scalapack-2.0.2
+SCALAPACKPATH = /home/petsou/scalapack-2.1.0
 
-LIB = -L$(SCALAPACKPATH) -lscalapack -L$(LAPACKPATH) -llapack -L$(BLASPATH) -lblas 
+LIB = -L$(SCALAPACKPATH) -lscalapack -llapack -lblas 
 
 
 SOURCE = datatypemodule.o exchcorrmodule.o functionsmodule.o random.o Afunc.o RHF.o RHFz.o Fnurec.o Fnu.o CISD.o getKv.o getK.o getJv.o getJ.o gammaf.o fj.o fac.o  \
@@ -39,7 +39,7 @@ SOURCE = datatypemodule.o exchcorrmodule.o functionsmodule.o random.o Afunc.o RH
        	 DFTCHI.o arbitaryorbitalsave.o orbitalmomentumtensor.o makeltesor.o dipoletensor.o PRINTENERGYEIGENVAL.o PRINTDIPOLETENSOR.o \
 	 diaghc.o makedensc.o getKvc.o getJvc.o DIISc.o TDFTCORR.o TDFT.o makedensTc.o inhomefieldoverlap.o dipoletensorinhom.o fouriertransf.o \
 	 graddipoletensor.o graddipoletensorinhom.o gradpriminhomefieldoverlap.o gethole.o exciteddenssave.o readbasisaux.o Wdensmatstartguess.o  Rdensmatstartguess.o \
-	 calcVRI.o calcWRI.o counteeRI.o eeintsRI.o vxc2.o
+	 calcVRI.o calcWRI.o counteeRI.o eeintsRI.o vxc2.o doubleprimoverlap.o doubleoverlap.o diraccorrelnucpot.o
 	 
 uquantchem:  $(SOURCE) 
 	$(FC) $(FFLAGS) $(SOURCE) $(LIB) -o uquantchem.mpi

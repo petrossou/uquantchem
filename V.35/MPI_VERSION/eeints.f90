@@ -82,7 +82,7 @@ DO GG=1,1
                         DMAXIMUM = (/ 2*DABS(DMAT(I,J)),2*DABS(DMAT(K,L)),DABS(DMAT(J,K)),DABS(DMAT(I,K)),DABS(DMAT(J,L)),DABS(DMAT(I,L)) /)
 
                         DMAX = MAXVAL(DMAXIMUM)
-
+                        
                         DOSUMOVERPRIMS = .FALSE.
 
                         IF ( ( IJ .EQ. KL .AND. sqrt(DABS(dInts(IJ)*dInts(KL)))*DMAX .GE. Tol ) .OR. ( IJ .EQ. KL .AND. .not. APPROXEE ) )  THEN

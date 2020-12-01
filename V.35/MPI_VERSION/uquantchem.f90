@@ -17,7 +17,7 @@ PROGRAM uquantchem
       INTEGER*8 ::NRED,FNRED,TOTALNONZERO,NONZERO,NONZEROO,Istart,Iend,Istartg,Iendg,Istarts,Iends,NDIAG,MODEIGHT,N0
       LOGICAL :: finns,WRITECICOEF,WRITEDENS,WHOMOLUMO,LEXCSP,SPINCONSERVE,RESTRICT,APPROXEE,NOREDIST,HYBRID,USEGTO,CORRALCUSP,VMCCALC,HFORBWRITE,CFORCE,RELAXN
       LOGICAL :: WRITEONFLY,MOVIE,MOLDYN
-      DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),Intsv(:),IntsvR(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsvR(:,:,:),HUCKELH(:,:),CHUCKEL(:,:),EHUCKEL(:)
+      DOUBLE PRECISION, ALLOCATABLE :: S(:,:),T(:,:),V(:,:),H0(:,:),MASSCORR(:,:),NUCDIRAC(:,:),Intsv(:),IntsvR(:),IntsDirac(:),EIGENVECT(:,:),Ints(:,:,:,:),gradIntsvR(:,:,:),HUCKELH(:,:),CHUCKEL(:,:),EHUCKEL(:)
       DOUBLE PRECISION, ALLOCATABLE :: VRI(:,:),gradVRI(:,:,:,:),WRI(:,:,:),gradWRI(:,:,:,:,:)
       DOUBLE PRECISION, ALLOCATABLE :: gradS(:,:,:,:),gradT(:,:,:,:),gradV(:,:,:,:),DMAT(:,:),CHUCKEL2(:,:),dInts(:),Intso(:),Intsoo(:),Pupp(:,:),Pdownn(:,:)
       DOUBLE PRECISION, ALLOCATABLE :: EHFeigenup(:),EHFeigendown(:),Cup(:,:),Cdown(:,:),PEXCITED(:,:),H00(:,:),DPTENSOR(:,:,:),DIPOLET(:,:),PEXu(:,:,:),PEXd(:,:,:),PEXuu(:,:,:),PEXdd(:,:,:)
@@ -32,9 +32,12 @@ PROGRAM uquantchem
       INTEGER, ALLOCATABLE :: rcounts(:),displs(:),Istart2(:),Istart3(:),IND1(:),IND2(:),IND3(:),IND4(:),Q1(:),Q2(:),Q3(:),Q11(:),Q22(:),Q33(:),EEMAP(:)
       INTEGER*8, ALLOCATABLE :: N0p(:)
       DOUBLE PRECISION, EXTERNAL :: massa
-      LOGICAL :: RESTART,ZEROSCF,XLBOMD,DFTC,SOFTSTART,HUCKEL,SCRATCH,DOTDFT,ADEF,OPTH,DOABSSPECTRUM,DIFFDENS,RIAPPROX,DIAGDG,FIELDREAD
-      INTEGER :: NSCCORR,LIMPRECALC
-      DOUBLE PRECISION :: MIXTDDFT,SCERR,FIELDDIR(3),TRANSCOORD(3,3),cosTH,sinTH,cosFI,sinFI,RIKTNING(3)
+      LOGICAL :: RESTART,ZEROSCF,XLBOMD,DFTC,SOFTSTART,HUCKEL,SCRATCH,DOTDFT,ADEF,OPTH,DOABSSPECTRUM,DIFFDENS,RIAPPROX,DIAGDG,FIELDREAD,SCALARRELC,WRITEEEINTS
+      INTEGER :: NSCCORR,LIMPRECALC,eeindex,NUMBEROFEEINTS
+      DOUBLE PRECISION :: MIXTDDFT,SCERR,FIELDDIR(3),TRANSCOORD(3,3),cosTH,sinTH,cosFI,sinFI,RIKTNING(3),integraal
+      DOUBLE PRECISION, PARAMETER :: lightspeed = 137.035999084
+      character (len=1000) :: ee_file_name
+      LOGICAL :: URHFTORHF
 
       call MPI_Init ( ierr )
       call MPI_Comm_rank ( MPI_COMM_WORLD, id, ierr )
@@ -44,6 +47,8 @@ PROGRAM uquantchem
       !STARTING THE CLOCK: 
       !-------------------
       call DATE_AND_TIME(date, time, zone,STARTTIME)
+
+      WRITEEEINTS = .TRUE. ! Hard coded (There is no input that can be given. If true the (ij | kl) electron-electron tesor will be written to disk)
 
       DFTC = .FALSE.
 
@@ -66,8 +71,15 @@ PROGRAM uquantchem
       & SAMPLERATE,NREPLICAS,TIMESTEP,TEND,TSTART,BETA,BJASTROW,CJASTROW,NPERSIST,REDISTRIBUTIONFREQ,NOREDIST,NRECALC,CUTTOFFFACTOR,MIX,DIISORD,DIISSTART,HYBRID,rc,CORRALCUSP,NVMC, &
       & HFORBWRITE,IOSA,CFORCE,RELAXN,NSTEPS,DR,FTol,NLSPOINTS,PORDER,WRITEONFLY,MOVIE,MOLDYN,TEMPERATURE,ZEROSCF,XLBOMD,kappa,alpha,DORDER,PULAY,FIXNSCF,NLEBEDEV,NCHEBGAUSS,&
       & EETOL,RELALGO,SOFTSTART,HUCKEL,ZEROSCFTYPE,ETEMP,IORBNR,AORBS,DIISORDEX,DOTDFT,OMEGA,EDIR,NEPERIOD,EPROFILE,EFIELDMAX,ADEF,OPTH,MIXEX,DOABSSPECTRUM,& 
-      & DIFFDENS,NSCCORR,MIXTDDFT,SCERR,RIAPPROX,LIMPRECALC,DIAGDG,FIELDDIR,FIELDREAD,DAMPING)
+      & DIFFDENS,NSCCORR,MIXTDDFT,SCERR,RIAPPROX,LIMPRECALC,DIAGDG,FIELDDIR,FIELDREAD,DAMPING,SCALARRELC,URHFTORHF)
 
+      IF ( MOD(Ne,2) .NE. 0 .AND. CORRLEVEL .EQ. 'RHF' ) THEN
+                IF ( id .EQ. 0 ) THEN
+                        print*,'Number of electrons is odd and you have chosen CORRLEVEL = RHF'
+                        print*,'changing CORRLEVEL = URHF enabaling an open shell calculation '
+                ENDIF
+                CORRLEVEL = 'URHF'
+      ENDIF
       !=======================================================================
       ! If the direction of the electric field has been set explicitly by the
       ! user and a TDDFT/THF or ADEF-calculation is to be performed, a change 
@@ -449,6 +461,16 @@ PROGRAM uquantchem
         ALLOCATE(V(NB,NB),gradV(NATOMS,3,NSI,NSI))
         
         CALL potential(BAS,NATOMS,ATOMS,V,gradV,NSI,CFORCE,id,numprocessors)
+        
+        ! Here the scalar-relatevistic correction terms: the p**4 mass-correction term and the nuclear Dirac term are calculated:
+        ALLOCATE(MASSCORR(NB,NB),NUCDIRAC(NB,NB))
+        IF ( SCALARRELC ) THEN
+                CALL diraccorrelnucpot(BAS,NATOMS,ATOMS,NUCDIRAC,id,numprocessors)
+                MASSCORR = -(1.0d0/(2.0d0*lightspeed**2))*MATMUL(T,T)
+        ELSE
+                NUCDIRAC(:,:) = 0.0d0
+                MASSCORR(:,:) = 0.0d0
+        ENDIF
 
         !================================================================================================
         ! If the auxiliary basis-file, BASISFILEAUX, is present in the run-directory and the user has not
@@ -813,16 +835,86 @@ PROGRAM uquantchem
         ENDIF
         
         ALLOCATE(IntsvR(Istart:Iend),gradIntsvR(FNATOMS,3,Istartg:Iendg))
+        ALLOCATE(IntsDirac(Istart:Iend))
         
-        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-        IF ( RIAPPROX ) THEN
-                CALL eeintsRI(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,&
-                        & PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,NONZERO,DMAT,dInts,NBAUX,VRI,WRI,gradVRI,gradWRI)
-        ELSE
-                CALL eeints(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,&
-                        & PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,NONZERO,DMAT,dInts)
+        write (ee_file_name,"('EETENSOR_',i0,'.dat')") id
+        inquire(file=trim(ee_file_name),exist=finns)
+        IF ( id .EQ. 0 .AND. finns .AND. WRITEEEINTS ) THEN
+                print*,'    ========================================================='
+                print*,'     Precalulated tensor elements (ij|lm) are read from disc '
+                print*,'    ========================================================='
         ENDIF
         
+        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+        
+        IF ( .not. finns .OR. CFORCE .OR. .not. WRITEEEINTS ) THEN
+                IF ( RIAPPROX ) THEN
+                        CALL eeintsRI(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,&
+                                & PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,NONZERO,DMAT,dInts,NBAUX,VRI,WRI,gradVRI,gradWRI)
+                ELSE
+                        CALL eeints(NATOMS,FNATOMS,BAS,IntsvR,gradIntsvR,IND1,IND2,IND3,IND4,NDIAG,Istart,Iend,Istartg,Iendg,&
+                                & PRYSR,PRYSW,numprocessors,APPROXEE,EETOL,CFORCE,id,NONZERO,DMAT,dInts)
+                ENDIF
+
+                IF ( WRITEEEINTS ) THEN 
+                        write (ee_file_name,"('EETENSOR_',i0,'.dat')") id
+                        OPEN(id,FILE=trim(ee_file_name),ACTION='WRITE')
+                        WRITE(id,*)Iend
+                        DO I=1,Iend
+                                WRITE(id,*)I,IntsvR(I)
+                        ENDDO
+                        CLOSE(id)
+                ENDIF
+
+        ELSE
+                write (ee_file_name,"('EETENSOR_',i0,'.dat')") id
+                OPEN(id,FILE=trim(ee_file_name),STATUS='OLD',ACTION='READ')
+                READ(id,*)NUMBEROFEEINTS
+                DO I=1,NUMBEROFEEINTS
+                        READ(id,*)eeindex,integraal
+                        IntsvR(eeindex) = integraal
+                ENDDO
+                CLOSE(id)
+        ENDIF
+   
+                
+               
+        !IF ( SCALARRELC ) THEN
+        !        write (ee_file_name,"('DOUBLEOVERLAP_',i0,'.dat')") id
+        !        inquire(file=trim(ee_file_name),exist=finns)
+        !        IF ( id .EQ. 0 .AND. finns .AND. WRITEEEINTS ) THEN
+        !                print*,'    =========================================================='
+        !                print*,'     Precalulated double overlap integrals are read from disc '
+        !                print*,'    =========================================================='
+        !        ENDIF
+        !      
+        !
+        !        IF ( .not. finns .OR. .not. WRITEEEINTS ) THEN
+        !                CALL doubleoverlap(NATOMS,BAS,IntsDirac,IND1,IND2,IND3,IND4,Istart,Iend,numprocessors,id,NONZERO)
+        !                
+        !                IF ( WRITEEEINTS ) THEN 
+        !                        write (ee_file_name,"('DOUBLEOVERLAP_',i0,'.dat')") id
+        !                        OPEN((id+1)*10,FILE=trim(ee_file_name),ACTION='WRITE')
+        !                        WRITE((id+1)*10,*)Iend
+        !                        DO I=1,Iend
+        !                                WRITE((id+1)*10,*)I,IntsDirac(I)
+        !                        ENDDO
+        !                        CLOSE((id+1)*10)
+        !                ENDIF
+        !        ELSE
+        !                write (ee_file_name,"('DOUBLEOVERLAP_',i0,'.dat')") id
+        !                OPEN((id+1)*10,FILE=trim(ee_file_name),STATUS='OLD',ACTION='READ')
+        !                READ((id+1)*10,*)NUMBEROFEEINTS
+        !                DO I=1,NUMBEROFEEINTS
+        !                        READ((id+1)*10,*)eeindex,integraal
+        !                        IntsDirac(eeindex) = integraal
+        !                ENDDO
+        !                CLOSE((id+1)*10)
+        !        ENDIF
+        !ENDIF
+
+        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
         IF ( id .EQ. 0 ) THEN
          print*,' '
          WRITE(*,'(A62)')'    =========================================================='
@@ -862,6 +954,11 @@ PROGRAM uquantchem
         
         H0 = T+V
 
+        IF ( SCALARRELC ) THEN
+                H0 = H0 + NUCDIRAC + MASSCORR
+        ENDIF
+
+
         IF ( ADEF .AND. EPROFILE .EQ. 'DP' ) THEN
                 IF ( id .EQ. 0 ) THEN
                         WRITE(*,*)' '
@@ -899,7 +996,7 @@ PROGRAM uquantchem
         ! atomic density matrices are read from the file 'DENSMATSTARTGUESS.dat'
         !==============================================================================
         ALLOCATE(Pup(NB,NB),Pdown(NB,NB))
-        IF ( NATOMS .GT. 1 ) THEN
+        IF ( NATOMS .GT. 0 ) THEN
                 CALL Rdensmatstartguess(ATOMS,NATOMS,NB,Pup,Pdown,SCRATCH,id)
                 NORM = SUM(S*(Pup+Pdown))
                 IF ( NORM .NE. 0.0d0 .AND. .not. SCRATCH ) THEN
@@ -982,7 +1079,8 @@ PROGRAM uquantchem
                 ELSE
                         P = 0.50d0*(Pup+Pdown)
                 ENDIF
-                CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
+                CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART, &
+                & NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE., SCALARRELC,IntsDirac,ETEMP,ENTROPY)
                
                 IF ( id .EQ. 0 .AND. NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
                 !====================
@@ -1039,8 +1137,9 @@ PROGRAM uquantchem
                 ENDIF
                 IF ( .not. RESTRICT .OR. CORRLEVEL .EQ. 'DQMC' .OR. CORRLEVEL .EQ. 'VMC' .OR. DFTC )  THEN
                    IF ( .not. DFTC ) THEN
-                           CALL URHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1, &
-                           & numprocessors,id,.TRUE.,SCRATCH,.FALSE.,ETEMP,ENTROPY)
+                           CALL URHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol, & 
+                                & EHFeigenup,EHFeigendown,ETOT,Cup,Cdown,Pup,Pdown,MIX,DIISORD,DIISSTART,NSCF,-1, &
+                                & numprocessors,id,.TRUE.,SCRATCH,.FALSE.,ETEMP,ENTROPY,SCALARRELC,IntsDirac,URHFTORHF)
                            IF ( DOTDFT ) THEN
                                 ETEMPE = ETEMP
                                 Pupc = Pup
@@ -1183,7 +1282,8 @@ PROGRAM uquantchem
                 IF ( (RESTRICT .AND. CORRLEVEL .EQ. 'CISD') .OR. (RESTRICT .AND.  CORRLEVEL .EQ. 'MP2')  ) THEN
                         ALLOCATE(EIGENVECT(NB,NB),EHFeigen(NB))
                         P = 0.0d0
-                        CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD,DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE.)
+                        CALL RHF(S,H0,IntsvR,IND1,IND2,IND3,IND4,Istart,Iend,NB,NRED,Ne,nucE,Tol,EHFeigen,ETOT,EIGENVECT,P,MIX,DIISORD, &
+                        & DIISSTART,NSCF,-1,numprocessors,id,.TRUE.,SCRATCH,.FALSE., SCALARRELC,IntsDirac,ETEMP,ENTROPY)
 
                         IF ( id .EQ. 0 .AND. NATOMS .GT. 1 ) CALL mulliken(NATOMS,ATOMS,BAS,P,S,ZMUL)
                         !====================
