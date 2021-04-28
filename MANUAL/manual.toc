@@ -1,0 +1,134 @@
+\contentsline {chapter}{\numberline {1}Introduction}{6}
+\contentsline {chapter}{\numberline {2}Compiling the code}{7}
+\contentsline {chapter}{\numberline {3}What Can be done with UQUANTCHEM}{9}
+\contentsline {section}{\numberline {3.1}Hartree Fock Calculations}{9}
+\contentsline {section}{\numberline {3.2}Configurational Interaction Calculations}{9}
+\contentsline {section}{\numberline {3.3}M\"oller Plesset Calculations (MP2)}{9}
+\contentsline {section}{\numberline {3.4}Density Functional Theory Calculations (DFT))}{9}
+\contentsline {section}{\numberline {3.5}Time Dependent Density Functional Theory Calculations (TDDFT))}{10}
+\contentsline {section}{\numberline {3.6}Quantum Montecarlo Calculations }{10}
+\contentsline {section}{\numberline {3.7}Born Oppenheimer Molecular Dynamics}{10}
+\contentsline {chapter}{\numberline {4}Setting up a UQANTCHEM calculation}{12}
+\contentsline {section}{\numberline {4.1}The input files}{12}
+\contentsline {subsection}{\numberline {4.1.1}The \texttt {INPUTFILE}-file}{12}
+\contentsline {subsection}{\numberline {4.1.2}The \texttt {BASISFILE}-file}{13}
+\contentsline {subsection}{\numberline {4.1.3}The \texttt {BASISFILEAUX}-file}{14}
+\contentsline {subsection}{\numberline {4.1.4}The \texttt {DENSMATSTARTGUESS.dat}-file}{14}
+\contentsline {subsection}{\numberline {4.1.5}The \texttt {MOLDYNRESTART.dat}-file}{14}
+\contentsline {subsection}{\numberline {4.1.6}The \texttt {INITVELO.dat}-file}{15}
+\contentsline {subsection}{\numberline {4.1.7}Running Uquantchem}{15}
+\contentsline {section}{\numberline {4.2}Input parameters}{15}
+\contentsline {subsection}{\numberline {4.2.1}\texttt {CORRLEVEL}}{15}
+\contentsline {subsection}{\numberline {4.2.2}\texttt {ADEF}}{15}
+\contentsline {subsection}{\numberline {4.2.3}\texttt {DOTDFT}}{16}
+\contentsline {subsection}{\numberline {4.2.4}\texttt {NSCCORR}}{16}
+\contentsline {subsection}{\numberline {4.2.5}\texttt {SCERR}}{16}
+\contentsline {subsection}{\numberline {4.2.6}\texttt {MIXTDDFT}}{16}
+\contentsline {subsection}{\numberline {4.2.7}\texttt {EPROFILE}}{16}
+\contentsline {subsection}{\numberline {4.2.8}\texttt {DOABSSPECTRUM}}{17}
+\contentsline {subsection}{\numberline {4.2.9}\texttt {NEPERIOD}}{17}
+\contentsline {subsection}{\numberline {4.2.10}\texttt {EFIELDMAX}}{17}
+\contentsline {subsection}{\numberline {4.2.11}\texttt {EDIR}}{17}
+\contentsline {subsection}{\numberline {4.2.12}\texttt {FIELDDIR}}{18}
+\contentsline {subsection}{\numberline {4.2.13}\texttt {OMEGA}}{18}
+\contentsline {subsection}{\numberline {4.2.14}\texttt {NCHEBGAUSS}}{18}
+\contentsline {subsection}{\numberline {4.2.15}\texttt {RIAPPROX}}{18}
+\contentsline {subsection}{\numberline {4.2.16}\texttt {LIMPRECALC} (Only openmp-version)}{19}
+\contentsline {subsection}{\numberline {4.2.17}\texttt {DIAGDG}}{19}
+\contentsline {subsection}{\numberline {4.2.18}\texttt {NLEBEDEV}}{19}
+\contentsline {subsection}{\numberline {4.2.19}\texttt {MOLDYN}}{19}
+\contentsline {subsection}{\numberline {4.2.20}\texttt {DAMPING}}{19}
+\contentsline {subsection}{\numberline {4.2.21}\texttt {XLBOMD}}{20}
+\contentsline {subsection}{\numberline {4.2.22}\texttt {SOFTSTART}}{20}
+\contentsline {subsection}{\numberline {4.2.23}\texttt {DORDER}}{20}
+\contentsline {subsection}{\numberline {4.2.24}\texttt {ALPHA}}{20}
+\contentsline {subsection}{\numberline {4.2.25}\texttt {KAPPA}}{20}
+\contentsline {subsection}{\numberline {4.2.26}\texttt {ZEROSCF}}{20}
+\contentsline {subsection}{\numberline {4.2.27}\texttt {ZEROSCFTYPE}}{21}
+\contentsline {subsection}{\numberline {4.2.28}\texttt {FIXNSCF}}{21}
+\contentsline {subsection}{\numberline {4.2.29}\texttt {MOVIE}}{21}
+\contentsline {subsection}{\numberline {4.2.30}\texttt {WRITEONFLY}}{21}
+\contentsline {subsection}{\numberline {4.2.31}\texttt {TEMPERATURE}}{22}
+\contentsline {subsection}{\numberline {4.2.32}\texttt {CFORCE}}{22}
+\contentsline {subsection}{\numberline {4.2.33}\texttt {PULAY}}{22}
+\contentsline {subsection}{\numberline {4.2.34}\texttt {TOL}}{22}
+\contentsline {subsection}{\numberline {4.2.35}\texttt {RELAXN}}{23}
+\contentsline {subsection}{\numberline {4.2.36}\texttt {RELALGO}}{23}
+\contentsline {subsection}{\numberline {4.2.37}\texttt {FTOL}}{23}
+\contentsline {subsection}{\numberline {4.2.38}\texttt {NSTEPS}}{23}
+\contentsline {subsection}{\numberline {4.2.39}\texttt {DR}}{23}
+\contentsline {subsection}{\numberline {4.2.40}\texttt {NLSPOINTS}}{23}
+\contentsline {subsection}{\numberline {4.2.41}\texttt {PORDER}}{24}
+\contentsline {subsection}{\numberline {4.2.42}\texttt {MIX}}{24}
+\contentsline {subsection}{\numberline {4.2.43}\texttt {ETEMP} (Only used for \texttt {CORRLEVEL = URHF,LDA,PBE,B3LYP})}{24}
+\contentsline {subsection}{\numberline {4.2.44}\texttt {DIISORD}}{24}
+\contentsline {subsection}{\numberline {4.2.45}\texttt {DIISSTART}}{25}
+\contentsline {subsection}{\numberline {4.2.46}\texttt {Ne}}{25}
+\contentsline {subsection}{\numberline {4.2.47}\texttt {NATOMS}}{25}
+\contentsline {subsection}{\numberline {4.2.48}\texttt {ATOM}}{25}
+\contentsline {subsection}{\numberline {4.2.49}\texttt {WRITECICOEF}}{25}
+\contentsline {subsection}{\numberline {4.2.50}\texttt {DIFFDENS}}{25}
+\contentsline {subsection}{\numberline {4.2.51}\texttt {WRITEDENS}}{26}
+\contentsline {subsection}{\numberline {4.2.52}\texttt {MESH}}{26}
+\contentsline {subsection}{\numberline {4.2.53}\texttt {LIMITS}}{27}
+\contentsline {subsection}{\numberline {4.2.54}\texttt {HFORBWRITE}}{27}
+\contentsline {subsection}{\numberline {4.2.55}\texttt {IOSA}}{27}
+\contentsline {subsection}{\numberline {4.2.56}\texttt {AORBS}}{27}
+\contentsline {subsection}{\numberline {4.2.57}\texttt {IORBNR}}{27}
+\contentsline {subsection}{\numberline {4.2.58}\texttt {WHOMOLUMO}}{28}
+\contentsline {subsection}{\numberline {4.2.59}\texttt {APPROXEE}}{28}
+\contentsline {subsection}{\numberline {4.2.60}\texttt {EETOL}}{28}
+\contentsline {subsection}{\numberline {4.2.61}\texttt {BETA}}{28}
+\contentsline {subsection}{\numberline {4.2.62}\texttt {NREPLICAS}}{29}
+\contentsline {subsection}{\numberline {4.2.63}\texttt {SAMPLERATE}}{29}
+\contentsline {subsection}{\numberline {4.2.64}\texttt {NPERSIST}}{29}
+\contentsline {subsection}{\numberline {4.2.65}\texttt {NRECALC}}{30}
+\contentsline {subsection}{\numberline {4.2.66}\texttt {REDISTRIBUTIONFREQ} (Only used in the MPI-version)}{30}
+\contentsline {subsection}{\numberline {4.2.67}\texttt {TEND}}{30}
+\contentsline {subsection}{\numberline {4.2.68}\texttt {TSTART}}{30}
+\contentsline {subsection}{\numberline {4.2.69}\texttt {TIMESTEP}}{30}
+\contentsline {subsection}{\numberline {4.2.70}\texttt {CUTTOFFFACTOR}}{30}
+\contentsline {subsection}{\numberline {4.2.71}\texttt {CUSPCORR}}{31}
+\contentsline {subsection}{\numberline {4.2.72}\texttt {rc}}{31}
+\contentsline {subsection}{\numberline {4.2.73}\texttt {CORRALCUSP}}{31}
+\contentsline {subsection}{\numberline {4.2.74}\texttt {BJASTROW}}{31}
+\contentsline {subsection}{\numberline {4.2.75}\texttt {CJASTROW}}{31}
+\contentsline {subsection}{\numberline {4.2.76}\texttt {NVMC}}{31}
+\contentsline {subsection}{\numberline {4.2.77}\texttt {LEXCSP}}{32}
+\contentsline {subsection}{\numberline {4.2.78}\texttt {ENEXCM}}{32}
+\contentsline {subsection}{\numberline {4.2.79}\texttt {NEEXC}}{32}
+\contentsline {subsection}{\numberline {4.2.80}\texttt {SPINCONSERVE}}{32}
+\contentsline {subsection}{\numberline {4.2.81}\texttt {RESTRICT}}{32}
+\contentsline {section}{\numberline {4.3}The output files}{32}
+\contentsline {subsection}{\numberline {4.3.1}The \texttt {CHARGEDENS.dat}-file}{32}
+\contentsline {subsection}{\numberline {4.3.2}The \texttt {RHFEIGENVALUES.dat}-file}{32}
+\contentsline {subsection}{\numberline {4.3.3}The \texttt {UHFEIGENVALUES.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.4}The \texttt {ORBITAL.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.5}The \texttt {ABSSPECTRUM.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.6}The \texttt {TDFTOUT.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.7}The \texttt {OCCUPATIONUP.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.8}The \texttt {OCCUPATIONDOWN.dat}-file}{33}
+\contentsline {subsection}{\numberline {4.3.9}The \texttt {DENSEXITED\_0.xsf}, . . . ,\texttt {DENSEXITED\_23.xsf}-files}{34}
+\contentsline {subsection}{\numberline {4.3.10}The \texttt {HOMODENS.dat}-file}{34}
+\contentsline {subsection}{\numberline {4.3.11}The \texttt {LUMODENS.dat}-file}{34}
+\contentsline {subsection}{\numberline {4.3.12}The \texttt {ENERGYDQMC.dat}-file}{35}
+\contentsline {subsection}{\numberline {4.3.13}The \texttt {DQMCRESTART.dat }-file}{35}
+\contentsline {subsection}{\numberline {4.3.14}The \texttt {MOLDYNENERGY.dat}-file}{35}
+\contentsline {subsection}{\numberline {4.3.15}The \texttt {MOLDYNRESTART.dat}-file}{35}
+\contentsline {subsection}{\numberline {4.3.16}The \texttt {MOLDYNMOVIE.xsf}-file}{36}
+\contentsline {subsection}{\numberline {4.3.17}The \texttt {ATOMPOSITIONS.dat}-file}{36}
+\contentsline {subsection}{\numberline {4.3.18}The \texttt {HOMO.xsf}-file and the \texttt {LUMO.xsf}-file}{36}
+\contentsline {chapter}{\numberline {5}Example Calculations}{37}
+\contentsline {chapter}{\numberline {6}Utility Matlab programs for plotting}{40}
+\contentsline {chapter}{\numberline {7}For the developer}{41}
+\contentsline {section}{\numberline {7.1}File-map}{41}
+\contentsline {subsection}{\numberline {7.1.1}\texttt {BASIS}}{41}
+\contentsline {subsection}{\numberline {7.1.2}\texttt {BLAS}}{41}
+\contentsline {subsection}{\numberline {7.1.3}\texttt {lapack-3.4.0}}{41}
+\contentsline {subsection}{\numberline {7.1.4}\texttt {UTILITYPROGRAMS}}{41}
+\contentsline {subsection}{\numberline {7.1.5}\texttt {TESTS}}{42}
+\contentsline {subsection}{\numberline {7.1.6}\texttt {README}}{42}
+\contentsline {subsection}{\numberline {7.1.7}\texttt {manual.pdf}}{42}
+\contentsline {subsection}{\numberline {7.1.8}\texttt {SERIALVERSION}}{42}
+\contentsline {subsection}{\numberline {7.1.9}\texttt {OPENMPVERSION}}{54}
+\contentsline {subsection}{\numberline {7.1.10}\texttt {MPI\_VERSION}}{54}
